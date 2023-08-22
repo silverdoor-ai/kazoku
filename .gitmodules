@@ -8,3 +8,6 @@
 [submodule "lib/baal"]
 	path = lib/baal
 	url = https://github.com/hausDAO/baal
+[submodule "lib/openzeppelin-upgrades"]
+	path = lib/openzeppelin-upgrades
+	url = https://github.com/OpenZeppelin/openzeppelin-upgrades
