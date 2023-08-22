@@ -6,7 +6,8 @@ import { HatsModule } from "hats-module/HatsModule.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
 import { ECDSAUpgradeable } from "openzeppelin/utils/cryptography/ECDSAUpgradeable.sol";
-import { EIP712Upgradeable } from "openzeppelin/utils/cryptography/EIP712Upgradeable.sol";
+import { HatsModuleEIP712 } from "src/HatsModuleEIP712.sol";
+
 
 /**
  * @title Seneschal positive ownership manager
@@ -19,7 +20,9 @@ import { EIP712Upgradeable } from "openzeppelin/utils/cryptography/EIP712Upgrade
  * @dev This contract inherits from the HatsModule contract, and is meant to be deployed as a clone from the
  * HatsModuleFactory.
  */
-contract Seneschal is HatsModule {
+contract Seneschal is HatsModule, HatsModuleEIP712 {
+
+    using ECDSAUpgradeable for bytes32;
 
     struct Commitment {
         uint256 hatId;
@@ -132,11 +135,11 @@ contract Seneschal is HatsModule {
      * @inheritdoc HatsModule
      */
     function setUp(bytes calldata _initData) public override initializer {
-    SHARES_TOKEN = IBaalToken(BAAL().sharesToken());
-    LOOT_TOKEN = IBaalToken(BAAL().lootToken());
+        SHARES_TOKEN = IBaalToken(BAAL().sharesToken());
+        LOOT_TOKEN = IBaalToken(BAAL().lootToken());
 
-    claimDelay = abi.decode(_initData, (uint256));
-
+        claimDelay = abi.decode(_initData, (uint256));
+        __init_EIP712();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -236,4 +239,14 @@ contract Seneschal is HatsModule {
         return true;
     }
 
+    /*//////////////////////////////////////////////////////////////
+    ////                      OVERRIDES
+    //////////////////////////////////////////////////////////////*/
+    function _domainNameAndVersion()
+        internal
+        pure
+        override(HatsModuleEIP712)
+        returns (string memory name, string memory version) {
+        return ("Seneschal", "1.0");
+    }
 }
