@@ -5,6 +5,8 @@ pragma solidity ^0.8.18;
 import { HatsModule } from "hats-module/HatsModule.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
+import { ECDSAUpgradeable } from "openzeppelin/utils/cryptography/ECDSAUpgradeable.sol";
+import { EIP712Upgradeable } from "openzeppelin/utils/cryptography/EIP712Upgradeable.sol";
 
 /**
  * @title Seneschal positive ownership manager
@@ -19,19 +21,22 @@ import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
  */
 contract Seneschal is HatsModule {
 
-    struct Sponsorship {
+    struct Commitment {
         uint256 hatId;
         uint256 shares;
         uint256 loot;
+        uint256 extraRewardAmount;
         uint256 deadline;
         uint256 sponsoredTime;
         string proposal;
         address recipient;
+        address extraRewardToken;
     }
 
     enum SponsorshipStatus {
         Pending,
-        Approved
+        Approved,
+        Claimed
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -51,9 +56,9 @@ contract Seneschal is HatsModule {
     ////                     EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Sponsored(address indexed sponsor, address indexed recipient, Sponsorship sponsorship);
-    event Processed(address indexed processor, address indexed recipient, Sponsorship sponsorship);
-    event Claimed(address indexed recipient, Sponsorship sponsorship);
+    event Sponsored(address indexed sponsor, address indexed recipient, Commitment commitment);
+    event Processed(address indexed processor, address indexed recipient, Commitment commitment);
+    event Claimed(address indexed recipient, Commitment commitment);
 
     /*//////////////////////////////////////////////////////////////
     ////                   PUBLIC CONSTANTS
@@ -114,7 +119,7 @@ contract Seneschal is HatsModule {
     //////////////////////////////////////////////////////////////*/
 
     // hashed fingerprint of the proposal
-    mapping(bytes32 sponsorshipStatus => SponsorshipStatus status) sponsorships;
+    mapping(bytes32 commitmentHash => SponsorshipStatus status) commitments;
 
     // note that HatsModule constructor disables initializer automatically
     constructor(string memory _version) HatsModule(_version) { }
@@ -140,94 +145,94 @@ contract Seneschal is HatsModule {
 
     /**
      * @dev Allows a sponsor to commit to a token distribution sponsorship w/ deliverables
-     * @param sponsorship contains all the details of the sponsorship
+     * @param commitment contains all the details of the sponsorship
      */
-    function sponsor(Sponsorship memory sponsorship) public returns (bool) {
+    function sponsor(Commitment memory commitment) public returns (bool) {
         if (!HATS().isWearerOfHat(msg.sender, hatId())) {
         revert NotSponsor();
         }
 
-        if (sponsorship.hatId != 0) {
-            if (!HATS().isWearerOfHat(sponsorship.recipient, sponsorship.hatId)) {
+        if (commitment.hatId != 0) {
+            if (!HATS().isWearerOfHat(commitment.recipient, commitment.hatId)) {
             revert Ineligible();
             }
         }
 
-        sponsorship.sponsoredTime = block.timestamp;
-        bytes32 sponsorshipHash = keccak256(abi.encode(sponsorship));
-        sponsorships[sponsorshipHash] = Seneschal.SponsorshipStatus.Pending;
+        commitment.sponsoredTime = block.timestamp;
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        commitments[commitmentHash] = Seneschal.SponsorshipStatus.Pending;
 
-        emit Sponsored(msg.sender, sponsorship.recipient, sponsorship);
+        emit Sponsored(msg.sender, commitment.recipient, commitment);
         return true;
     }
 
     /**
-     * @dev Allows a processor to mark a token distribution sponsorship as completed
-     * @param sponsorship contains all the details of the sponsorship
+     * @dev Allows a processor to mark a token distribution commitment as completed
+     * @param commitment contains all the details of the sponsorship
      */
-    function process(Sponsorship calldata sponsorship) public returns (bool) {
+    function process(Commitment calldata commitment) public returns (bool) {
         if (!HATS().isWearerOfHat(msg.sender, hatId2())) {
         revert NotProcessor();
         }
 
-        if (sponsorship.sponsoredTime + claimDelay > block.timestamp) {
+        if (commitment.sponsoredTime + claimDelay > block.timestamp) {
         revert ProcessedEarly();
         }
 
-        if (sponsorship.hatId != 0) {
-            if (!HATS().isWearerOfHat(sponsorship.recipient, sponsorship.hatId)) {
+        if (commitment.hatId != 0) {
+            if (!HATS().isWearerOfHat(commitment.recipient, commitment.hatId)) {
             revert Ineligible();
             }
         }
 
-        if (block.timestamp > sponsorship.deadline) {
+        if (block.timestamp > commitment.deadline) {
         revert DeadlinePassed();
         }
 
-        bytes32 sponsorshipHash = keccak256(abi.encode(sponsorship));
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        if (sponsorships[sponsorshipHash] != Seneschal.SponsorshipStatus.Pending) {
+        if (commitments[commitmentHash] != Seneschal.SponsorshipStatus.Pending) {
         revert NotSponsored();
         }
 
-        sponsorships[sponsorshipHash] = Seneschal.SponsorshipStatus.Approved;
-        emit Processed(msg.sender, sponsorship.recipient, sponsorship);
+        commitments[commitmentHash] = Seneschal.SponsorshipStatus.Approved;
+        emit Processed(msg.sender, commitment.recipient, commitment);
         return true;
     }
 
     /**
      * @dev Allows a recipient to claim their tokens after the claim delay has passed
-     * @param sponsorship contains all the details of the sponsorship
+     * @param commitment contains all the details of the sponsorship
      */
-    function claim(Sponsorship calldata sponsorship) public returns (bool) {
-        if (msg.sender != sponsorship.recipient) {
+    function claim(Commitment calldata commitment) public returns (bool) {
+        if (msg.sender != commitment.recipient) {
         revert InvalidClaim();
         }
 
-        bytes32 sponsorshipHash = keccak256(abi.encode(sponsorship));
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        if (sponsorships[sponsorshipHash] != Seneschal.SponsorshipStatus.Approved) {
+        if (commitments[commitmentHash] != Seneschal.SponsorshipStatus.Approved) {
         revert NotApproved();
         }
 
-        delete sponsorships[sponsorshipHash];
+        delete commitments[commitmentHash];
 
         address[] memory recipient = new address[](1);
-        recipient[0] = sponsorship.recipient;
+        recipient[0] = commitment.recipient;
 
-        if (sponsorship.shares > 0) {
+        if (commitment.shares > 0) {
             uint256[] memory shareAmount = new uint256[](1);
-            shareAmount[0] = sponsorship.shares;
+            shareAmount[0] = commitment.shares;
             BAAL().mintShares(recipient, shareAmount);
         }
 
-        if (sponsorship.loot > 0) {
+        if (commitment.loot > 0) {
             uint256[] memory lootAmount = new uint256[](1);
-            lootAmount[0] = sponsorship.loot;
+            lootAmount[0] = commitment.loot;
             BAAL().mintLoot(recipient, lootAmount);
         }
 
-        emit Claimed(msg.sender, sponsorship);
+        emit Claimed(msg.sender, commitment);
         return true;
     }
 
