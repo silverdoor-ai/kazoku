@@ -8,12 +8,15 @@ import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
 import { HatsModuleEIP712 } from "src/HatsModuleEIP712.sol";
 import { ECDSA } from "solady/utils/ECDSA.sol";
 import { IERC20 } from "src/dep/IERC20.sol";
+import { Commitment, SponsorshipStatus } from "src/CommitmentStructs.sol";
 
 /**
  * @title Seneschal positive ownership manager
  * @notice A Baal manager shaman that allows "sponsor" hat wearers to commit to a token distribution sponsorship w/
  * deliverables and "processor" hat wearers to mark a token distribution sponsorship as completed.  After the
- * distribution is approved; the recipient can claim their tokens at any future date.
+ * distribution is approved; the recipient can claim their tokens at any future date.  Proposals are submitted
+ * to Arweave; likely via Mirror - and mapped to the SHA256 bytes32 content digest hash.  This content digest hash
+ * is the ItemID for the proposal and can be used to retrieve the proposal forever.
  * @author SilverDoor
  * @author RaidGuild
  * @author @st4rgard3n
@@ -23,29 +26,6 @@ import { IERC20 } from "src/dep/IERC20.sol";
 contract Seneschal is HatsModule, HatsModuleEIP712 {
 
     using ECDSA for bytes32;
-
-    struct Commitment {
-        uint256 hatId;
-        uint256 shares;
-        uint256 loot;
-        // the amount of extra reward tokens to distribute
-        uint256 extraRewardAmount;
-        // project must be completed before this time
-        uint256 completionDeadline;
-        // this value will be overridden during sponsoring
-        uint256 sponsoredTime;
-        // the Arweave content digest can be used to retrieve the proposal forever
-        // Mirror Arweave retrieval ( https://dev.mirror.xyz/GjssNdA6XK7VYynkvwDem3KYwPACSU9nDWpR5rei3hw )
-        bytes32 arweaveContentDigest;
-        address recipient;
-        address extraRewardToken;
-    }
-
-    enum SponsorshipStatus {
-        Pending,
-        Approved,
-        Claimed
-    }
 
     /*//////////////////////////////////////////////////////////////
     ////                 CUSTOM ERRORS
@@ -165,8 +145,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
 
         commitment.sponsoredTime = block.timestamp;
+
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
-        commitments[commitmentHash] = Seneschal.SponsorshipStatus.Pending;
+        commitments[commitmentHash] = SponsorshipStatus.Pending;
 
         emit Sponsored(msg.sender, commitment.recipient, commitment);
         return true;
@@ -195,11 +176,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        if (commitments[commitmentHash] != Seneschal.SponsorshipStatus.Pending) {
+        if (commitments[commitmentHash] != SponsorshipStatus.Pending) {
         revert NotSponsored();
         }
 
-        commitments[commitmentHash] = Seneschal.SponsorshipStatus.Approved;
+        commitments[commitmentHash] = SponsorshipStatus.Approved;
         emit Processed(msg.sender, commitment.recipient, commitment);
         return true;
     }
@@ -218,33 +199,13 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        if (commitments[commitmentHash] != Seneschal.SponsorshipStatus.Approved) {
+        if (commitments[commitmentHash] != SponsorshipStatus.Approved) {
         revert NotApproved();
         }
 
-        commitments[commitmentHash] = Seneschal.SponsorshipStatus.Claimed;
+        commitments[commitmentHash] = SponsorshipStatus.Claimed;
 
-        address[] memory recipient = new address[](1);
-        recipient[0] = commitment.recipient;
-
-        if (commitment.shares > 0) {
-            uint256[] memory shareAmount = new uint256[](1);
-            shareAmount[0] = commitment.shares;
-            BAAL().mintShares(recipient, shareAmount);
-        }
-
-        if (commitment.loot > 0) {
-            uint256[] memory lootAmount = new uint256[](1);
-            lootAmount[0] = commitment.loot;
-            BAAL().mintLoot(recipient, lootAmount);
-        }
-
-        if (commitment.extraRewardAmount > 0 && commitment.extraRewardToken != address(0)) {
-            bool success = IERC20(commitment.extraRewardToken).transfer(commitment.recipient, commitment.extraRewardAmount);
-            if (!success) {
-                revert FailedExtraRewards(commitment.extraRewardToken, commitment.extraRewardAmount);
-            }
-        }
+        _claim(commitment);
 
         emit Claimed(msg.sender, commitment);
         return true;
@@ -294,6 +255,30 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
 
         return signer;
+    }
+
+    function _claim(Commitment memory commitment) internal {
+        address[] memory recipient = new address[](1);
+        recipient[0] = commitment.recipient;
+
+        if (commitment.shares > 0) {
+            uint256[] memory shareAmount = new uint256[](1);
+            shareAmount[0] = commitment.shares;
+            BAAL().mintShares(recipient, shareAmount);
+        }
+
+        if (commitment.loot > 0) {
+            uint256[] memory lootAmount = new uint256[](1);
+            lootAmount[0] = commitment.loot;
+            BAAL().mintLoot(recipient, lootAmount);
+        }
+
+        if (commitment.extraRewardAmount > 0 && commitment.extraRewardToken != address(0)) {
+            bool success = IERC20(commitment.extraRewardToken).transfer(commitment.recipient, commitment.extraRewardAmount);
+            if (!success) {
+                revert FailedExtraRewards(commitment.extraRewardToken, commitment.extraRewardAmount);
+            }
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
