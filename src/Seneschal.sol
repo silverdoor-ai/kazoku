@@ -143,7 +143,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         SHARES_TOKEN = IBaalToken(BAAL().sharesToken());
         LOOT_TOKEN = IBaalToken(BAAL().lootToken());
 
-        claimDelay = abi.decode(_initData, (uint256));
+        uint256 additiveDelay = abi.decode(_initData, (uint256));
+        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
         __init_EIP712();
     }
 
@@ -250,6 +251,19 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     }
 
     /*//////////////////////////////////////////////////////////////
+    ////                   ACCESS CONTROL
+    //////////////////////////////////////////////////////////////*/
+
+    // @dev Allows the owner to change the claim delay
+    // Especially useful if the DAO plans to increase it's voting and/or grace periods.  Change this contracts delay
+    // pre-emptively to prevent rogue proposals from being processed early.
+    // @param additiveDelay the amount of time to add to the voting and grace periods
+    function setClaimDelay(uint256 additiveDelay) public {
+        _authenticateHat(msg.sender, OWNER_HAT());
+        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
+    }
+
+    /*//////////////////////////////////////////////////////////////
     ////                   INTERNAL / PRIVATE
     //////////////////////////////////////////////////////////////*/
 
@@ -273,11 +287,12 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             commitment.recipient,
             commitment.extraRewardToken
         )));
+
         address signer = digest.recover(signature);
         if (signer == address(0)) {
             revert InvalidSignature();
         }
-        _authenticateHat(signer, commitment.hatId);
+
         return signer;
     }
 
