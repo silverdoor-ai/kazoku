@@ -7,6 +7,7 @@ import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
 import { HatsModuleEIP712 } from "src/HatsModuleEIP712.sol";
 import { ECDSA } from "solady/utils/ECDSA.sol";
+import { IERC20 } from "src/dep/IERC20.sol";
 
 /**
  * @title Seneschal positive ownership manager
@@ -51,6 +52,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     //////////////////////////////////////////////////////////////*/
 
     error NotAuth(uint256 hatId);
+    error FailedExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
     error NotApproved();
     error NotSponsored();
     error ProcessedEarly();
@@ -153,15 +155,12 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * @dev Allows a sponsor to commit to a token distribution sponsorship w/ deliverables
      * @param commitment contains all the details of the sponsorship
      */
-    function sponsor(Commitment memory commitment) public returns (bool) {
-        if (!HATS().isWearerOfHat(msg.sender, hatId())) {
-        revert NotAuth(hatId());
-        }
+    function sponsor(Commitment memory commitment, bytes calldata signature) public returns (bool) {
+        address signer = _verify(commitment, signature);
+        _authenticateHat(signer, hatId());
 
         if (commitment.hatId != 0) {
-            if (!HATS().isWearerOfHat(commitment.recipient, commitment.hatId)) {
-            revert NotAuth(commitment.hatId);
-            }
+            _authenticateHat(commitment.recipient, commitment.hatId);
         }
 
         commitment.sponsoredTime = block.timestamp;
@@ -176,23 +175,21 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * @dev Allows a processor to mark a token distribution commitment as completed
      * @param commitment contains all the details of the sponsorship
      */
-    function process(Commitment calldata commitment) public returns (bool) {
-        if (!HATS().isWearerOfHat(msg.sender, hatId2())) {
-        revert NotAuth(hatId2());
-        }
+    function process(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
+        address signer = _verify(commitment, signature);
+
+        _authenticateHat(signer, hatId2());
 
         if (commitment.sponsoredTime + claimDelay > block.timestamp) {
         revert ProcessedEarly();
         }
 
-        if (commitment.hatId != 0) {
-            if (!HATS().isWearerOfHat(commitment.recipient, commitment.hatId)) {
-            revert NotAuth(commitment.hatId);
-            }
-        }
-
         if (block.timestamp > commitment.completionDeadline) {
         revert DeadlinePassed();
+        }
+
+        if (commitment.hatId != 0) {
+            _authenticateHat(commitment.recipient, commitment.hatId);
         }
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
@@ -212,8 +209,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * as completed.
      * @param commitment contains all the details of the sponsorship
      */
-    function claim(Commitment calldata commitment) public returns (bool) {
-        if (msg.sender != commitment.recipient) {
+    function claim(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
+        address signer = _verify(commitment, signature);
+        if (signer != commitment.recipient) {
         revert InvalidClaim();
         }
 
@@ -223,7 +221,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         revert NotApproved();
         }
 
-        delete commitments[commitmentHash];
+        commitments[commitmentHash] = Seneschal.SponsorshipStatus.Claimed;
 
         address[] memory recipient = new address[](1);
         recipient[0] = commitment.recipient;
@@ -238,6 +236,13 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             uint256[] memory lootAmount = new uint256[](1);
             lootAmount[0] = commitment.loot;
             BAAL().mintLoot(recipient, lootAmount);
+        }
+
+        if (commitment.extraRewardAmount > 0 && commitment.extraRewardToken != address(0)) {
+            bool success = IERC20(commitment.extraRewardToken).transfer(commitment.recipient, commitment.extraRewardAmount);
+            if (!success) {
+                revert FailedExtraRewards(commitment.extraRewardToken, commitment.extraRewardAmount);
+            }
         }
 
         emit Claimed(msg.sender, commitment);
@@ -255,7 +260,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         return true;
     }
 
-    function _verify(Commitment memory commitment, bytes memory signature) internal view returns (bool) {
+    function _verify(Commitment memory commitment, bytes memory signature) internal view returns (address) {
         bytes32 digest = _hashTypedData(keccak256(abi.encode(
             keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
             commitment.hatId,
@@ -273,7 +278,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             revert InvalidSignature();
         }
         _authenticateHat(signer, commitment.hatId);
-        return true;
+        return signer;
     }
 
     /*//////////////////////////////////////////////////////////////
