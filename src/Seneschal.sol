@@ -5,9 +5,8 @@ pragma solidity ^0.8.18;
 import { HatsModule } from "hats-module/HatsModule.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
-import { ECDSAUpgradeable } from "openzeppelin/utils/cryptography/ECDSAUpgradeable.sol";
 import { HatsModuleEIP712 } from "src/HatsModuleEIP712.sol";
-
+import { ECDSA } from "solady/utils/ECDSA.sol";
 
 /**
  * @title Seneschal positive ownership manager
@@ -22,16 +21,21 @@ import { HatsModuleEIP712 } from "src/HatsModuleEIP712.sol";
  */
 contract Seneschal is HatsModule, HatsModuleEIP712 {
 
-    using ECDSAUpgradeable for bytes32;
+    using ECDSA for bytes32;
 
     struct Commitment {
         uint256 hatId;
         uint256 shares;
         uint256 loot;
+        // the amount of extra reward tokens to distribute
         uint256 extraRewardAmount;
-        uint256 deadline;
+        // project must be completed before this time
+        uint256 completionDeadline;
+        // this value will be overridden during sponsoring
         uint256 sponsoredTime;
-        string proposal;
+        // the Arweave content digest can be used to retrieve the proposal forever
+        // Mirror Arweave retrieval ( https://dev.mirror.xyz/GjssNdA6XK7VYynkvwDem3KYwPACSU9nDWpR5rei3hw )
+        bytes32 arweaveContentDigest;
         address recipient;
         address extraRewardToken;
     }
@@ -46,14 +50,13 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     ////                 CUSTOM ERRORS
     //////////////////////////////////////////////////////////////*/
 
-    error NotSponsor();
-    error NotProcessor();
+    error NotAuth(uint256 hatId);
     error NotApproved();
     error NotSponsored();
-    error Ineligible();
     error ProcessedEarly();
     error DeadlinePassed();
     error InvalidClaim();
+    error InvalidSignature();
 
     /*//////////////////////////////////////////////////////////////
     ////                     EVENTS
@@ -143,7 +146,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     }
 
     /*//////////////////////////////////////////////////////////////
-    ////                  SHAMAN LOGIC
+    ////                     SHAMAN LOGIC
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -152,12 +155,12 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      */
     function sponsor(Commitment memory commitment) public returns (bool) {
         if (!HATS().isWearerOfHat(msg.sender, hatId())) {
-        revert NotSponsor();
+        revert NotAuth(hatId());
         }
 
         if (commitment.hatId != 0) {
             if (!HATS().isWearerOfHat(commitment.recipient, commitment.hatId)) {
-            revert Ineligible();
+            revert NotAuth(commitment.hatId);
             }
         }
 
@@ -175,7 +178,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      */
     function process(Commitment calldata commitment) public returns (bool) {
         if (!HATS().isWearerOfHat(msg.sender, hatId2())) {
-        revert NotProcessor();
+        revert NotAuth(hatId2());
         }
 
         if (commitment.sponsoredTime + claimDelay > block.timestamp) {
@@ -184,11 +187,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         if (commitment.hatId != 0) {
             if (!HATS().isWearerOfHat(commitment.recipient, commitment.hatId)) {
-            revert Ineligible();
+            revert NotAuth(commitment.hatId);
             }
         }
 
-        if (block.timestamp > commitment.deadline) {
+        if (block.timestamp > commitment.completionDeadline) {
         revert DeadlinePassed();
         }
 
@@ -205,6 +208,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
     /**
      * @dev Allows a recipient to claim their tokens after the claim delay has passed
+     * Note that the recipient's eligibility is no longer checked here; because the commitment was processed already
+     * as completed.
      * @param commitment contains all the details of the sponsorship
      */
     function claim(Commitment calldata commitment) public returns (bool) {
@@ -240,7 +245,39 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     }
 
     /*//////////////////////////////////////////////////////////////
-    ////                      OVERRIDES
+    ////                   INTERNAL / PRIVATE
+    //////////////////////////////////////////////////////////////*/
+
+    function _authenticateHat(address signer, uint256 hatId) internal view returns (bool) {
+        if (!HATS().isWearerOfHat(signer, hatId)) {
+            revert NotAuth(hatId);
+        }
+        return true;
+    }
+
+    function _verify(Commitment memory commitment, bytes memory signature) internal view returns (bool) {
+        bytes32 digest = _hashTypedData(keccak256(abi.encode(
+            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
+            commitment.hatId,
+            commitment.shares,
+            commitment.loot,
+            commitment.extraRewardAmount,
+            commitment.completionDeadline,
+            commitment.sponsoredTime,
+            commitment.arweaveContentDigest,
+            commitment.recipient,
+            commitment.extraRewardToken
+        )));
+        address signer = digest.recover(signature);
+        if (signer == address(0)) {
+            revert InvalidSignature();
+        }
+        _authenticateHat(signer, commitment.hatId);
+        return true;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    ////                        OVERRIDES
     //////////////////////////////////////////////////////////////*/
     function _domainNameAndVersion()
         internal
