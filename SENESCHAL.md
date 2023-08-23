@@ -1,61 +1,111 @@
-# Seneschal Shaman Contract
-## Introduction:
-The Seneschal smart contract is designed as a positive ownership manager to enable and manage token distribution sponsorships in the context of a DAO, likely built on top of the Baal framework. The contract enables entities defined as "sponsors" to commit to a token distribution with deliverables, and "processors" to verify and approve the token distribution once conditions are met.
+# Seneschal Smart Contract Documentation
 
-### Key Points:
-The contract utilizes the "hats" concept from the "HatsModule" for role-based access control, e.g., sponsors and processors.
+## Overview
 
-A sponsorship is a commitment to distribute tokens to an address (the recipient). The details of this commitment are stored in the Sponsorship struct.
+The `Seneschal` smart contract is designed to manage sponsorships for token distributions, with specific deliverables. It allows sponsors to commit to a sponsorship and processors to mark the sponsorship as complete. Once the distribution is approved, the recipient can claim their tokens at any future date.
 
-The contract utilizes EIP-1167 minimal proxy pattern (clones) with immutable arguments for cheaper deployment.
+## Table of Contents
 
-### Structs and Enums:
-1. Sponsorship:
-Represents a sponsorship offer.
+- [Public Constants](#public-constants)
+- [Mutable State](#mutable-state)
+- [Events](#events)
+- [Public Functions](#public-functions)
+  
+## Public Constants
 
-hatId: ID representing the hat required for the recipient to claim the distribution. If it's 0, there's no specific hat requirement.
+### `BAAL()`
 
-shares: The amount of shares to distribute.
+Returns the instantiated interface of the Baal DAO contract.
 
-loot: The amount of loot to distribute.
+### `OWNER_HAT()`
 
-deadline: The deadline by which the sponsorship can be processed.
+Returns the hatId of the owner hat.
 
-sponsoredTime: The timestamp when the sponsorship was created.
+### `hatId2()`
 
-proposal: A string containing the proposal details.
+Returns the hatId of the processor hat.
 
-recipient: The address intended to receive the shares/loot distribution.
+## Mutable State
 
-2. SponsorshipStatus:
-Represents the status of a sponsorship.
+- `commitments`: A mapping from a commitment hash to its sponsorship status (`SponsorshipStatus` enum).
 
-Pending: The sponsorship is committed but not yet processed.
+## Events
 
-Approved: The sponsorship has been processed and approved.
+### `Sponsored`
 
-### Key Functions:
-1. sponsor:
-Allows a "sponsor" to commit to a token distribution sponsorship.
+Emitted when a sponsorship is committed by a sponsor.
 
-The function checks if the sender is a wearer of the defined sponsor hat.
+### `Processed`
 
-If there's a specific hat requirement (hatId), the recipient must be a wearer of the hat.
+Emitted when a commitment is marked as processed by a processor.
 
-Emits the Sponsored event.
+### `Claimed`
 
-2. process:
-Allows a "processor" to mark a token distribution sponsorship as completed.
+Emitted when the recipient claims their tokens.
 
-Checks the eligibility of the sender, ensures deadlines are not breached, and verifies the sponsorship hasn't been processed.
+## Public Functions
 
-After validation, the sponsorship status is updated to Approved.
+### `sponsor(Commitment memory commitment, bytes calldata signature)`
 
-Emits the Processed event.
+#### Parameters
 
-3. claim:
-Allows the recipient of the sponsorship to claim their tokens.
+- `commitment`: The details of the sponsorship.
+- `signature`: The valid signature of the commitment by the sponsor.
 
-Validates the eligibility of the caller, checks the status of the sponsorship, and transfers the appropriate amount of shares or loot to the recipient.
+#### Returns
 
-Emits the Claimed event.
+- `bool`: True if the operation is successful.
+
+#### Description
+
+Allows a sponsor to commit to a token distribution sponsorship with deliverables.
+
+---
+
+### `process(Commitment calldata commitment, bytes calldata signature)`
+
+#### Parameters
+
+- `commitment`: The details of the sponsorship.
+- `signature`: The valid signature of the commitment by the processor.
+
+#### Returns
+
+- `bool`: True if the operation is successful.
+
+#### Description
+
+Allows a processor to mark a token distribution commitment as completed.
+
+---
+
+### `claim(Commitment calldata commitment, bytes calldata signature)`
+
+#### Parameters
+
+- `commitment`: The details of the sponsorship.
+- `signature`: The valid signature of the commitment by the recipient.
+
+#### Returns
+
+- `bool`: True if the operation is successful.
+
+#### Description
+
+Allows a recipient to claim their tokens after the claim delay has passed.
+
+---
+
+### `setClaimDelay(uint256 additiveDelay)`
+
+#### Parameters
+
+- `additiveDelay`: The amount of time to add to the voting and grace periods.
+
+#### Description
+
+Allows the owner to change the claim delay. Useful if the DAO plans to increase its voting and/or grace periods.
+
+## Notes
+
+The contract includes additional utility methods and internal logic to manage the state and enforce constraints but those are not detailed here. The contract also includes various custom errors for exceptional cases.
