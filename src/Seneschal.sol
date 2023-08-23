@@ -39,6 +39,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     error DeadlinePassed();
     error InvalidClaim();
     error InvalidSignature();
+    error ExistingCommitment();
 
     /*//////////////////////////////////////////////////////////////
     ////                     EVENTS
@@ -135,6 +136,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     /**
      * @dev Allows a sponsor to commit to a token distribution sponsorship w/ deliverables
      * @param commitment contains all the details of the sponsorship
+     * @param signature valid signature of the commitment by the sponsor
      */
     function sponsor(Commitment memory commitment, bytes calldata signature) public returns (bool) {
         address signer = _verify(commitment, signature);
@@ -147,6 +149,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         commitment.sponsoredTime = block.timestamp;
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        if (commitments[commitmentHash] != SponsorshipStatus.Empty) {
+            revert ExistingCommitment();
+        }
         commitments[commitmentHash] = SponsorshipStatus.Pending;
 
         emit Sponsored(msg.sender, commitment.recipient, commitment);
@@ -156,6 +161,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     /**
      * @dev Allows a processor to mark a token distribution commitment as completed
      * @param commitment contains all the details of the sponsorship
+     * @param signature valid signature of the commitment by the processor
      */
     function process(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
         address signer = _verify(commitment, signature);
@@ -190,6 +196,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * Note that the recipient's eligibility is no longer checked here; because the commitment was processed already
      * as completed.
      * @param commitment contains all the details of the sponsorship
+     * @param signature valid signature of the commitment by the recipient
      */
     function claim(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
         address signer = _verify(commitment, signature);
@@ -228,6 +235,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     ////                   INTERNAL / PRIVATE
     //////////////////////////////////////////////////////////////*/
 
+    // @dev Reverts if the specified signer is not wearing the specified hat
+    // @param signer the address of the signer
+    // @param hatId the id of the hat
     function _authenticateHat(address signer, uint256 hatId) internal view returns (bool) {
         if (!HATS().isWearerOfHat(signer, hatId)) {
             revert NotAuth(hatId);
@@ -235,6 +245,10 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         return true;
     }
 
+    // @dev Verifies the signature against the commitment by building a typed data hash digest and recovering the
+    // signer from the digest.
+    // @param commitment contains all the details of the sponsorship
+    // @param signature valid signature of the commitment by the signer
     function _verify(Commitment memory commitment, bytes memory signature) internal view returns (address) {
         bytes32 digest = _hashTypedData(keccak256(abi.encode(
             keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
@@ -257,6 +271,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         return signer;
     }
 
+    // @dev Mints the shares, loot, and extra rewards to the recipient
+    // @param commitment contains all the details of the sponsorship
     function _claim(Commitment memory commitment) internal {
         address[] memory recipient = new address[](1);
         recipient[0] = commitment.recipient;
