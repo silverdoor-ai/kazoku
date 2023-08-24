@@ -50,13 +50,15 @@ contract DeployInstance is Script {
 
   /// @dev override this to abi.encode (packed) other relevant immutable args (initialized and set within the function
   /// body). Alternatively, you can pass encoded data in
-  function encodeImmutableArgs() internal virtual returns (bytes memory) {
-    // abi.encodePacked()...
+  function encodeImmutableArgs(address baal, uint256 sponsorHatId, uint256 processorHatId) internal virtual returns (bytes memory) {
+    bytes memory immutableArgs = abi.encodePacked(baal, sponsorHatId, processorHatId);
+    return otherImmutableArgs;
   }
 
   /// @dev override this to abi.encode (unpacked) the init data (initialized and set within the function body)
-  function encodeInitData() internal virtual returns (bytes memory) {
-    // abi.encode()...
+  function encodeInitData(uint256 additiveDelay) internal virtual returns (bytes memory) {
+    bytes memory initData = abi.encode(additiveDelay);
+    return initData;
   }
 
   /// @dev override this to set the default values within the function body
