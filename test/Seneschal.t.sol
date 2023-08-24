@@ -108,4 +108,51 @@ contract WithInstanceTest is SeneschalTest {
     );
   }
 
+  function deployBaalWithShaman(string memory _name, string memory _symbol, bytes32 _saltNonce, address _shaman)
+    public
+    returns (IBaal)
+  {
+    // encode initParams
+    bytes memory initializationParams = abi.encode(_name, _symbol, address(0), address(0), address(0), address(0));
+    // encode initial action to set the shaman
+    address[] memory shamans = new address[](1);
+    uint256[] memory permissions = new uint256[](1);
+    shamans[0] = _shaman;
+    permissions[0] = 2; // manager only
+    bytes[] memory initializationActions = new bytes[](1);
+    initializationActions[0] = abi.encodeCall(IBaal.setShamans, (shamans, permissions));
+    // deploy the baal
+    return IBaal(
+      summoner.summonBaalFromReferrer(initializationParams, initializationActions, uint256(_saltNonce), "referrer")
+    );
+  }
+
+  /// @dev props to @santteegt
+  function predictBaalAddress(bytes32 _saltNonce) public view returns (address baalAddress) {
+    address template = summoner.template();
+    bytes memory initializer = abi.encodeWithSignature("avatar()");
+
+    bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), uint256(_saltNonce)));
+
+    // This is how ModuleProxyFactory works
+    bytes memory deployment =
+    //solhint-disable-next-line max-line-length
+     abi.encodePacked(hex"602d8060093d393df3363d3d373d3d3d363d73", template, hex"5af43d82803e903d91602b57fd5bf3");
+
+    bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), zodiacFactory, salt, keccak256(deployment)));
+
+    // NOTE: cast last 20 bytes of hash to address
+    baalAddress = address(uint160(uint256(hash)));
+  }
+
+  function grantShares(address _member, uint256 _amount) public {
+    vm.prank(address(baal));
+    sharesToken.mint(_member, _amount);
+  }
+
+  function grantLoot(address _member, uint256 _amount) public {
+    vm.prank(address(baal));
+    lootToken.mint(_member, _amount);
+  }
+
 }
