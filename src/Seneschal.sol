@@ -48,6 +48,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     event Sponsored(address indexed sponsor, address indexed recipient, Commitment commitment);
     event Processed(address indexed processor, address indexed recipient, Commitment commitment);
     event Claimed(address indexed recipient, Commitment commitment);
+    event ClaimDelaySet(uint256 delay);
 
     /*//////////////////////////////////////////////////////////////
     ////                   PUBLIC CONSTANTS
@@ -111,6 +112,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     mapping(bytes32 commitmentHash => SponsorshipStatus status) commitments;
 
     // note that HatsModule constructor disables initializer automatically
+    // note that HatsModuleEIP712 constructor disables initializer automatically
     constructor(string memory _version) HatsModule(_version) { }
 
     /*//////////////////////////////////////////////////////////////
@@ -126,6 +128,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         uint256 additiveDelay = abi.decode(_initData, (uint256));
         claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
+        emit ClaimDelaySet(claimDelay);
         __init_EIP712();
     }
 
@@ -229,6 +232,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     function setClaimDelay(uint256 additiveDelay) public {
         _authenticateHat(msg.sender, OWNER_HAT());
         claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
+        emit ClaimDelaySet(claimDelay);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -300,6 +304,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     /*//////////////////////////////////////////////////////////////
     ////                        OVERRIDES
     //////////////////////////////////////////////////////////////*/
+
+    // @dev Returns the contract version and name for constructing a domain separator.
+    // note: update the version value prior to deploying any modified implementation
     function _domainNameAndVersion()
         internal
         pure
