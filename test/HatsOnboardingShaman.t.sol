@@ -85,6 +85,8 @@ contract WithInstanceTest is HatsOnboardingShamanTest {
 
   uint256 public constant MIN_STARTING_SHARES = 1e18;
 
+  // @dev handles data formatting for the HatsFactory and deploys the new instance w/ immutable args
+  // note that the HATS contract address is hardcoded in the HatsFactory
   function deployInstance(address _baal, uint256 _memberHat, uint256 _ownerHat, uint256 _startingShares)
     public
     returns (HatsOnboardingShaman)

@@ -71,10 +71,10 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     * ----------------------------------------------------------------------|
     * 0       | IMPLEMENTATION    | address | 20      | HatsModule          |
     * 20      | HATS              | address | 20      | HatsModule          |
-    * 40      | hatId (sponsor)   | uint256 | 32      | HatsModule          |
+    * 40      | sponsorHatId      | uint256 | 32      | HatsModule          |
     * 72      | BAAL              | address | 20      | this                |
     * 92      | OWNER_HAT         | uint256 | 32      | this                |
-    * 124     | hatId2 (processor)| uint256 | 32      | this                |
+    * 124     | processorHatId    | uint256 | 32      | this                |
     * ----------------------------------------------------------------------+
     */
 
@@ -89,8 +89,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
       return _getArgUint256(92);
     }
 
-    // @notice returns the hatId of the approver hat
-    // note that hatId() returns the hatId of the proposer hat
+    // @notice returns the hatId of the processor hat
+    // note that hatId() returns the hatId of the sponsor hat
     function hatId2() public pure returns (uint256) {
       return _getArgUint256(124);
     }
