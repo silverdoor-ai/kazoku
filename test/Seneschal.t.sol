@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import { Test, console2 } from "forge-std/Test.sol";
 import { Seneschal } from "../src/Seneschal.sol";
-import { DeployImplementation } from "../script/HatsOnboardingShaman.s.sol";
+import { DeployImplementation } from "../script/Seneschal.s.sol";
 import {
   IHats,
   HatsModuleFactory,
@@ -75,7 +75,10 @@ contract WithInstanceTest is SeneschalTest {
   uint256 public baalSaltNonce;
 
   uint256 public tophat;
-  uint256 public memberHat;
+  uint256 public sponsorHat;
+  uint256 public processorHat;
+  uint256 public eligibleHat;
+  uint256 public additiveDelay = 1 days;
   address public eligibility = makeAddr("eligibility");
   address public toggle = makeAddr("toggle");
   address public dao = makeAddr("dao");
@@ -155,4 +158,56 @@ contract WithInstanceTest is SeneschalTest {
     lootToken.mint(_member, _amount);
   }
 
+  function setUp() public virtual override {
+    super.setUp();
+
+    // deploy the hats module factory
+    factory = deployModuleFactory(HATS, SALT, FACTORY_VERSION);
+
+    // set up hats
+    tophat = HATS.mintTopHat(dao, "tophat", "dao.eth/tophat");
+    vm.startPrank(dao);
+    sponsorHat = HATS.createHat(tophat, "sponsorHat", 50, eligibility, toggle, true, "dao.eth/sponsorHat");
+    processorHat = HATS.createHat(tophat, "processorHat", 50, eligibility, toggle, true, "dao.eth/processorHat");
+    eligibleHat = HATS.createHat(tophat, "eligibleHat", 50, eligibility, toggle, true, "dao.eth/eligibleHat");
+    HATS.mintHat(sponsorHat, wearer1);
+    HATS.mintHat(processorHat, wearer2);
+    HATS.mintHat(eligibleHat, eligibleRecipient);
+    vm.stopPrank();
+
+    // predict the baal's address
+    predictedBaalAddress = predictBaalAddress(SALT);
+
+    // predict the shaman's address via the hats module factory
+    predictedShamanAddress =
+      factory.getHatsModuleAddress(
+        address(implementation),
+        sponsorHat,
+        abi.encodePacked(predictedBaalAddress, tophat, processorHat));
+
+    // deploy a test baal with the predicted shaman address
+    baal = deployBaalWithShaman("TEST_BAAL", "TEST_BAAL", SALT, predictedShamanAddress);
+    // find and set baal token addresses
+    sharesToken = IBaalToken(baal.sharesToken());
+    lootToken = IBaalToken(baal.lootToken());
+
+    // deploy the shaman instance
+    shaman = deployInstance(
+      predictedBaalAddress,
+      sponsorHat,
+      tophat,
+      processorHat,
+      additiveDelay);
+
+    // ensure that the actual and predicted addresses are the same
+    require(address(baal) == predictedBaalAddress, "actual and predicted baal addresses do not match");
+  }
+}
+
+contract Deployment is WithInstanceTest {
+
+  function testDeployment() public {
+    // check that the shaman was deployed at the predicted address
+    assertEq(address(shaman), predictedShamanAddress);
+  }
 }

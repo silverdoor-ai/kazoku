@@ -39,25 +39,34 @@ contract DeployImplementation is Script {
 }
 
 contract DeployInstance is Script {
+
   HatsModuleFactory public factory;
-  address public implementation;
+
   address public instance;
-  uint256 public hatId;
+  address public implementation;
+
+  uint256 public sponsorHatId;
+  address public baal;
+  uint256 public ownerHat;
+  uint256 public processorHatId;
   bytes public otherImmutableArgs;
+
+  uint256 additiveDelay;
   bytes public initData;
+
   bool internal verbose = true;
   bool internal defaults = true;
 
   /// @dev override this to abi.encode (packed) other relevant immutable args (initialized and set within the function
   /// body). Alternatively, you can pass encoded data in
-  function encodeImmutableArgs(address baal, uint256 sponsorHatId, uint256 processorHatId) internal virtual returns (bytes memory) {
-    bytes memory immutableArgs = abi.encodePacked(baal, sponsorHatId, processorHatId);
+  function encodeImmutableArgs() internal virtual returns (bytes memory) {
+    otherImmutableArgs = abi.encodePacked(baal, sponsorHatId, processorHatId);
     return otherImmutableArgs;
   }
 
   /// @dev override this to abi.encode (unpacked) the init data (initialized and set within the function body)
-  function encodeInitData(uint256 additiveDelay) internal virtual returns (bytes memory) {
-    bytes memory initData = abi.encode(additiveDelay);
+  function encodeInitData() internal virtual returns (bytes memory) {
+    initData = abi.encode(additiveDelay);
     return initData;
   }
 
@@ -72,14 +81,21 @@ contract DeployInstance is Script {
   function prepare(
     HatsModuleFactory _factory,
     address _implementation,
-    uint256 _hatId,
+    uint256 _sponsorHatId,
+    address _baal,
+    uint256 _ownerHat,
+    uint256 _processorHatId,
+    uint256 _additiveDelay,
     bytes memory _otherImmutableArgs,
     bytes memory _initData,
     bool _verbose
   ) public {
     factory = _factory;
     implementation = _implementation;
-    hatId = _hatId;
+    sponsorHatId = _sponsorHatId;
+    baal = _baal;
+    ownerHat = _ownerHat;
+    processorHatId = _processorHatId;
     otherImmutableArgs = _otherImmutableArgs;
     initData = _initData;
     verbose = _verbose;
@@ -105,7 +121,7 @@ contract DeployInstance is Script {
     }
 
     // deploy the instance
-    instance = deployModuleInstance(factory, implementation, hatId, otherImmutableArgs, initData);
+    instance = deployModuleInstance(factory, implementation, sponsorHatId, otherImmutableArgs, initData);
 
     vm.stopBroadcast();
 
