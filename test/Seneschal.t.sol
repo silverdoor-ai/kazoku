@@ -210,4 +210,33 @@ contract Deployment is WithInstanceTest {
     // check that the shaman was deployed at the predicted address
     assertEq(address(shaman), predictedShamanAddress);
   }
+
+  function test_setAsManagerShaman() public {
+    assertEq(baal.shamans(address(shaman)), 2);
+  }
+
+  function test_baal() public {
+    assertEq(address(shaman.BAAL()), address(baal));
+    assertEq(address(shaman.BAAL()), predictBaalAddress(SALT));
+  }
+
+  function test_sharesToken() public {
+    assertEq(address(shaman.SHARES_TOKEN()), address(sharesToken));
+  }
+
+  function test_lootToken() public {
+    assertEq(address(shaman.LOOT_TOKEN()), address(lootToken));
+  }
+
+  function test_version() public {
+    assertEq(shaman.version(), SHAMAN_VERSION);
+  }
+
+  function test_sponsorHat() public {
+    assertEq(shaman.hatId(), sponsorHat);
+  }
+
+  function test_ownerHat() public {
+    assertEq(shaman.OWNER_HAT(), tophat);
+  }
 }
