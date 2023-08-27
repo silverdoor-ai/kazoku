@@ -46,8 +46,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     //////////////////////////////////////////////////////////////*/
 
     event Sponsored(address indexed sponsor, address indexed recipient, Commitment commitment);
-    event Processed(address indexed processor, address indexed recipient, Commitment commitment);
-    event Claimed(address indexed recipient, Commitment commitment);
+    event Processed(address indexed processor, address indexed recipient, bytes32 indexed commitmentHash);
+    event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
     event ClaimDelaySet(uint256 delay);
 
     /*//////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
 
         commitments[commitmentHash] = SponsorshipStatus.Approved;
-        emit Processed(msg.sender, commitment.recipient, commitment);
+        emit Processed(msg.sender, commitment.recipient, commitmentHash);
         return true;
     }
 
@@ -217,7 +217,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         _claim(commitment);
 
-        emit Claimed(msg.sender, commitment);
+        emit Claimed(msg.sender, commitmentHash);
         return true;
     }
 

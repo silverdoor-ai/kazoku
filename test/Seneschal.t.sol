@@ -29,22 +29,27 @@ contract SeneschalTest is DeployImplementation, Test {
   string public SHAMAN_VERSION = "shaman test version";
 
   /*//////////////////////////////////////////////////////////////
-    ////                 CUSTOM ERRORS
-    //////////////////////////////////////////////////////////////*/
+  ////                 CUSTOM ERRORS
+  //////////////////////////////////////////////////////////////*/
 
-    error NotAuth(uint256 hatId);
-    error FailedExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
-    error NotApproved();
-    error NotSponsored();
-    error ProcessedEarly();
-    error DeadlinePassed();
-    error InvalidClaim();
-    error InvalidSignature();
-    error ExistingCommitment();
+  error NotAuth(uint256 hatId);
+  error FailedExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
+  error NotApproved();
+  error NotSponsored();
+  error ProcessedEarly();
+  error DeadlinePassed();
+  error InvalidClaim();
+  error InvalidSignature();
+  error ExistingCommitment();
 
-    /*//////////////////////////////////////////////////////////////
-    ////                     EVENTS
-    //////////////////////////////////////////////////////////////*/
+  /*//////////////////////////////////////////////////////////////
+  ////                     EVENTS
+  //////////////////////////////////////////////////////////////*/
+
+  event Sponsored(address indexed sponsor, address indexed recipient, Commitment commitment);
+  event Processed(address indexed processor, address indexed recipient, bytes32 indexed commitmentHash);
+  event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
+  event ClaimDelaySet(uint256 delay);
 
 
   function setUp() public virtual {
@@ -238,5 +243,10 @@ contract Deployment is WithInstanceTest {
 
   function test_ownerHat() public {
     assertEq(shaman.OWNER_HAT(), tophat);
+  }
+
+  function test_additiveDelay() public {
+    uint256 _claimDelay = additiveDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod();
+    assertEq(shaman.claimDelay(), _claimDelay);
   }
 }
