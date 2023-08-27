@@ -96,13 +96,19 @@ contract WithInstanceTest is SeneschalTest {
   address public eligibility = makeAddr("eligibility");
   address public toggle = makeAddr("toggle");
   address public dao = makeAddr("dao");
-  address public sponsorHatWearer = makeAddr("sponsorHatWearer");
-  address public processorHatWearer = makeAddr("processorHatWearer");
-  address public eligibleRecipient = makeAddr("eligibleRecipient");
-  address public nonWearer = makeAddr("nonWearer");
+  uint256 public sponsorHatWearerPrivateKey = uint256(1);
+  address public sponsorHatWearer = vm.addr(sponsorHatWearerPrivateKey);
+  uint256 public processorHatWearerPrivateKey = uint256(2);
+  address public processorHatWearer = vm.addr(processorHatWearerPrivateKey);
+  uint256 public eligibleRecipientPrivateKey = uint256(3);
+  address public eligibleRecipient = vm.addr(eligibleRecipientPrivateKey);
+  uint256 public nonWearerPrivateKey = uint256(4);
+  address public nonWearer = vm.addr(nonWearerPrivateKey);
 
   // EIP712 Signing
   bytes32 public DOMAIN_SEPARATOR;
+  bytes32 public COMMIT_TYPE_HASH = keccak256(
+    "Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)");
   bytes32 public constant _DOMAIN_TYPEHASH =
         0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
@@ -215,6 +221,11 @@ contract WithInstanceTest is SeneschalTest {
             mstore(0x3a, 0)
         }
     }
+
+  function signFromUser(uint256 signer, bytes32 digest) public returns (bytes memory signature) {
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer, digest);
+    signature = abi.encodePacked(r, s, v);
+  }
 
   function setUp() public virtual override {
     super.setUp();
