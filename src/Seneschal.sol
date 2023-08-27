@@ -45,8 +45,17 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     ////                     EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event Sponsored(address indexed sponsor, address indexed recipient, Commitment commitment);
-    event Processed(address indexed processor, address indexed recipient, bytes32 indexed commitmentHash);
+    event Sponsored(
+        address indexed sponsor,
+        address indexed recipient,
+        bytes32 indexed commitmentHash,
+        Commitment commitment);
+
+    event Processed(
+        address indexed processor,
+        address indexed recipient,
+        bytes32 indexed commitmentHash);
+
     event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
     event ClaimDelaySet(uint256 delay);
 
@@ -127,7 +136,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         LOOT_TOKEN = IBaalToken(BAAL().lootToken());
 
         uint256 additiveDelay = abi.decode(_initData, (uint256));
-        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
+        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod() + 3 days;
         emit ClaimDelaySet(claimDelay);
         __init_EIP712();
     }
@@ -157,7 +166,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
         commitments[commitmentHash] = SponsorshipStatus.Pending;
 
-        emit Sponsored(msg.sender, commitment.recipient, commitment);
+        emit Sponsored(msg.sender, commitment.recipient, commitmentHash, commitment);
         return true;
     }
 

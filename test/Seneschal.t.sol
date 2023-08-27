@@ -46,10 +46,19 @@ contract SeneschalTest is DeployImplementation, Test {
   ////                     EVENTS
   //////////////////////////////////////////////////////////////*/
 
-  event Sponsored(address indexed sponsor, address indexed recipient, Commitment commitment);
-  event Processed(address indexed processor, address indexed recipient, bytes32 indexed commitmentHash);
-  event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
-  event ClaimDelaySet(uint256 delay);
+  event Sponsored(
+        address indexed sponsor,
+        address indexed recipient,
+        bytes32 indexed commitmentHash,
+        Commitment commitment);
+
+    event Processed(
+        address indexed processor,
+        address indexed recipient,
+        bytes32 indexed commitmentHash);
+
+    event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
+    event ClaimDelaySet(uint256 delay);
 
 
   function setUp() public virtual {
@@ -87,10 +96,15 @@ contract WithInstanceTest is SeneschalTest {
   address public eligibility = makeAddr("eligibility");
   address public toggle = makeAddr("toggle");
   address public dao = makeAddr("dao");
-  address public wearer1 = makeAddr("wearer1");
-  address public wearer2 = makeAddr("wearer2");
+  address public sponsorHatWearer = makeAddr("sponsorHatWearer");
+  address public processorHatWearer = makeAddr("processorHatWearer");
   address public eligibleRecipient = makeAddr("eligibleRecipient");
   address public nonWearer = makeAddr("nonWearer");
+
+  // EIP712 Signing
+  bytes32 public DOMAIN_SEPARATOR;
+  bytes32 public constant _DOMAIN_TYPEHASH =
+        0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
   address public predictedBaalAddress;
   address public predictedShamanAddress;
@@ -163,6 +177,45 @@ contract WithInstanceTest is SeneschalTest {
     lootToken.mint(_member, _amount);
   }
 
+  function buildSeparatorFromShaman() public {
+    ( ,
+      string memory name,
+      string memory version,
+      uint256 chainId,
+        address verifyingContract,
+    , ) = shaman.eip712Domain();
+
+    bytes32 nameHash = keccak256(bytes(name));
+    bytes32 versionHash = keccak256(bytes(version));
+
+    bytes32 separator;
+    /// @solidity memory-safe-assembly
+    assembly {
+        let m := mload(0x40) // Load the free memory pointer.
+        mstore(m, _DOMAIN_TYPEHASH)
+        mstore(add(m, 0x20), nameHash)
+        mstore(add(m, 0x40), versionHash)
+        mstore(add(m, 0x60), chainid())
+        mstore(add(m, 0x80), verifyingContract)
+        separator := keccak256(m, 0xa0)
+    }
+    DOMAIN_SEPARATOR = separator;
+  }
+
+  function _hashTypedData(bytes32 structHash) public returns (bytes32 digest) {
+        bytes32 separator = DOMAIN_SEPARATOR;
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Compute the digest.
+            mstore(0x00, 0x1901000000000000) // Store "\x19\x01".
+            mstore(0x1a, separator) // Store the domain separator.
+            mstore(0x3a, structHash) // Store the struct hash.
+            digest := keccak256(0x18, 0x42)
+            // Restore the part of the free memory slot that was overwritten.
+            mstore(0x3a, 0)
+        }
+    }
+
   function setUp() public virtual override {
     super.setUp();
 
@@ -175,8 +228,8 @@ contract WithInstanceTest is SeneschalTest {
     sponsorHat = HATS.createHat(tophat, "sponsorHat", 50, eligibility, toggle, true, "dao.eth/sponsorHat");
     processorHat = HATS.createHat(tophat, "processorHat", 50, eligibility, toggle, true, "dao.eth/processorHat");
     eligibleHat = HATS.createHat(tophat, "eligibleHat", 50, eligibility, toggle, true, "dao.eth/eligibleHat");
-    HATS.mintHat(sponsorHat, wearer1);
-    HATS.mintHat(processorHat, wearer2);
+    HATS.mintHat(sponsorHat, sponsorHatWearer);
+    HATS.mintHat(processorHat, processorHatWearer);
     HATS.mintHat(eligibleHat, eligibleRecipient);
     vm.stopPrank();
 
@@ -246,7 +299,27 @@ contract Deployment is WithInstanceTest {
   }
 
   function test_additiveDelay() public {
-    uint256 _claimDelay = additiveDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod();
+    uint256 _claimDelay = additiveDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + 3 days;
     assertEq(shaman.claimDelay(), _claimDelay);
+  }
+  
+  function test_commit() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      hatId: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            completionDeadline: _completionDeadline,
+             sponsoredTime: uint256(0),
+                arweaveContentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+
+
   }
 }
