@@ -9,7 +9,7 @@ import {
   HatsModuleFactory,
   deployModuleFactory,
   deployModuleInstance
-} from "lib/hats-module/src/utils/DeployFunctions.sol";
+} from "hats-module/utils/DeployFunctions.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
 import { IBaalSummoner } from "baal/interfaces/IBaalSummoner.sol";

@@ -5,7 +5,7 @@ import { Script, console2 } from "forge-std/Script.sol";
 import { Seneschal } from "../src/Seneschal.sol";
 import {
   HatsModuleFactory, deployModuleFactory, deployModuleInstance
-} from "lib/hats-module/src/utils/DeployFunctions.sol";
+} from "hats-module/utils/DeployFunctions.sol";
 
 contract DeployImplementation is Script {
   Seneschal public implementation;
