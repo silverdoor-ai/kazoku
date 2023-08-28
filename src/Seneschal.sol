@@ -239,7 +239,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param additiveDelay the amount of time to add to the voting and grace periods
     function setClaimDelay(uint256 additiveDelay) public {
         _authenticateHat(msg.sender, OWNER_HAT());
-        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
+        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod() + 3 days;
         emit ClaimDelaySet(claimDelay);
     }
 

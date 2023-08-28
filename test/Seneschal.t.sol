@@ -652,4 +652,219 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
   }
 
+  function test_claim() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      hatId: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            completionDeadline: _completionDeadline,
+             sponsoredTime: uint256(0),
+                arweaveContentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    shaman.process(commitment, signature);
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Approved;
+    assertEq(uint256(actual), uint256(expected));
+
+    signature = signFromUser(nonWearerPrivateKey, digest);
+    shaman.claim(commitment, signature);
+
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Claimed;
+    assertEq(uint256(actual), uint256(expected));
+
+    uint256 expectedShareBalance = commitment.shares;
+    uint256 expectedLootBalance = commitment.loot;
+
+    assertEq(sharesToken.balanceOf(nonWearer), expectedShareBalance);
+    assertEq(lootToken.balanceOf(nonWearer), expectedLootBalance);
+  }
+
+  function test_claimInvalidClaimFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      hatId: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            completionDeadline: _completionDeadline,
+             sponsoredTime: uint256(0),
+                arweaveContentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    shaman.process(commitment, signature);
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Approved;
+    assertEq(uint256(actual), uint256(expected));
+
+    signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+
+    vm.expectRevert(InvalidClaim.selector);
+    shaman.claim(commitment, signature);
+  }
+
+  function test_claimNotApprovedFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      hatId: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            completionDeadline: _completionDeadline,
+             sponsoredTime: uint256(0),
+                arweaveContentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    signature = signFromUser(nonWearerPrivateKey, digest);
+
+    vm.expectRevert(NotApproved.selector);
+    shaman.claim(commitment, signature);
+  }
+
+  function test_claimEvent() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      hatId: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            completionDeadline: _completionDeadline,
+             sponsoredTime: uint256(0),
+                arweaveContentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    shaman.process(commitment, signature);
+
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Approved;
+    assertEq(uint256(actual), uint256(expected));
+
+    signature = signFromUser(nonWearerPrivateKey, digest);
+
+    vm.expectEmit(true, true, false, false);
+    emit Claimed(nonWearer, shaman.getCommitmentHash(commitment));
+    shaman.claim(commitment, signature);
+  }
+
+  function test_setClaimDelay() public {
+    vm.startPrank(dao);
+    uint256 newClaimDelay = 3 days;
+    shaman.setClaimDelay(newClaimDelay);
+    vm.stopPrank();
+
+    uint256 actual = shaman.claimDelay();
+    uint256 expected = IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + 6 days;
+    assertEq(actual, expected);
+  }
+
+  function test_setClaimDelayEvent() public {
+    vm.startPrank(dao);
+    uint256 newClaimDelay = 3 days;
+    uint256 expected = IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + 6 days;
+
+    vm.expectEmit(true, false, false, false);
+    emit ClaimDelaySet(expected);
+    shaman.setClaimDelay(newClaimDelay);
+    vm.stopPrank();
+  }
+
 }
