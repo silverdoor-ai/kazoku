@@ -198,7 +198,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
 
         _commitments[commitmentHash] = SponsorshipStatus.Approved;
-        emit Processed(msg.sender, commitment.recipient, commitmentHash);
+        emit Processed(signer, commitment.recipient, commitmentHash);
         return true;
     }
 
@@ -225,7 +225,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         _claim(commitment);
 
-        emit Claimed(msg.sender, commitmentHash);
+        emit Claimed(signer, commitmentHash);
         return true;
     }
 
