@@ -166,7 +166,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
         _commitments[commitmentHash] = SponsorshipStatus.Pending;
 
-        emit Sponsored(msg.sender, commitment.recipient, commitmentHash, commitment);
+        emit Sponsored(signer, commitment.recipient, commitmentHash, commitment);
         return true;
     }
 
