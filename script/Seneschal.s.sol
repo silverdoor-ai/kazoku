@@ -85,7 +85,6 @@ contract DeployInstance is Script {
     address _baal,
     uint256 _ownerHat,
     uint256 _processorHatId,
-    uint256 _additiveDelay,
     bytes memory _otherImmutableArgs,
     bytes memory _initData,
     bool _verbose

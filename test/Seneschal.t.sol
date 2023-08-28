@@ -105,13 +105,6 @@ contract WithInstanceTest is SeneschalTest {
   uint256 public nonWearerPrivateKey = uint256(4);
   address public nonWearer = vm.addr(nonWearerPrivateKey);
 
-  // EIP712 Signing
-  bytes32 public DOMAIN_SEPARATOR;
-  bytes32 public COMMIT_TYPE_HASH = keccak256(
-    "Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)");
-  bytes32 public constant _DOMAIN_TYPEHASH =
-        0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
-
   address public predictedBaalAddress;
   address public predictedShamanAddress;
 
@@ -183,46 +176,7 @@ contract WithInstanceTest is SeneschalTest {
     lootToken.mint(_member, _amount);
   }
 
-  function buildSeparatorFromShaman() public {
-    ( ,
-      string memory name,
-      string memory version,
-      uint256 chainId,
-        address verifyingContract,
-    , ) = shaman.eip712Domain();
-
-    bytes32 nameHash = keccak256(bytes(name));
-    bytes32 versionHash = keccak256(bytes(version));
-
-    bytes32 separator;
-    /// @solidity memory-safe-assembly
-    assembly {
-        let m := mload(0x40) // Load the free memory pointer.
-        mstore(m, _DOMAIN_TYPEHASH)
-        mstore(add(m, 0x20), nameHash)
-        mstore(add(m, 0x40), versionHash)
-        mstore(add(m, 0x60), chainid())
-        mstore(add(m, 0x80), verifyingContract)
-        separator := keccak256(m, 0xa0)
-    }
-    DOMAIN_SEPARATOR = separator;
-  }
-
-  function _hashTypedData(bytes32 structHash) public returns (bytes32 digest) {
-        bytes32 separator = DOMAIN_SEPARATOR;
-        /// @solidity memory-safe-assembly
-        assembly {
-            // Compute the digest.
-            mstore(0x00, 0x1901000000000000) // Store "\x19\x01".
-            mstore(0x1a, separator) // Store the domain separator.
-            mstore(0x3a, structHash) // Store the struct hash.
-            digest := keccak256(0x18, 0x42)
-            // Restore the part of the free memory slot that was overwritten.
-            mstore(0x3a, 0)
-        }
-    }
-
-  function signFromUser(uint256 signer, bytes32 digest) public returns (bytes memory signature) {
+  function signFromUser(uint256 signer, bytes32 digest) public pure returns (bytes memory signature) {
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer, digest);
     signature = abi.encodePacked(r, s, v);
   }
@@ -268,6 +222,11 @@ contract WithInstanceTest is SeneschalTest {
       processorHat,
       additiveDelay);
 
+    vm.label(address(factory), "Hats Module Factory");
+    vm.label(address(shaman), "Seneschal");
+    vm.label(address(baal), "Baal DAO");
+    vm.label(address(HATS), "Hats Protocol");
+
     // ensure that the actual and predicted addresses are the same
     require(address(baal) == predictedBaalAddress, "actual and predicted baal addresses do not match");
   }
@@ -305,6 +264,10 @@ contract Deployment is WithInstanceTest {
     assertEq(shaman.hatId(), sponsorHat);
   }
 
+  function test_processorHat() public {
+    assertEq(shaman.hatId2(), processorHat);
+  }
+
   function test_ownerHat() public {
     assertEq(shaman.OWNER_HAT(), tophat);
   }
@@ -314,7 +277,7 @@ contract Deployment is WithInstanceTest {
     assertEq(shaman.claimDelay(), _claimDelay);
   }
   
-  function test_commit() public {
+  function test_sponsor() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
 
@@ -331,6 +294,16 @@ contract Deployment is WithInstanceTest {
     });
 
 
+    bytes32 digest = shaman.getDigest(commitment);
 
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
   }
 }

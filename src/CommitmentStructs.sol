@@ -2,6 +2,7 @@ pragma solidity ^0.8.18;
 
 // the Arweave content digest can be used to retrieve the proposal forever
 // Mirror Arweave retrieval ( https://dev.mirror.xyz/GjssNdA6XK7VYynkvwDem3KYwPACSU9nDWpR5rei3hw )
+
 /// @title Commitment
 /// @notice This struct serves as the primary data storage for each sponsorship commitment.
 /// Each field within this struct represents a specific parameter of the commitment.

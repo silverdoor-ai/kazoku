@@ -118,7 +118,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     //////////////////////////////////////////////////////////////*/
 
     // hashed fingerprint of the proposal
-    mapping(bytes32 commitmentHash => SponsorshipStatus status) commitments;
+    mapping(bytes32 commitmentHash => SponsorshipStatus status) private _commitments;
 
     // note that HatsModule constructor disables initializer automatically
     // note that HatsModuleEIP712 constructor disables initializer automatically
@@ -161,10 +161,10 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         commitment.sponsoredTime = block.timestamp;
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
-        if (commitments[commitmentHash] != SponsorshipStatus.Empty) {
+        if (_commitments[commitmentHash] != SponsorshipStatus.Empty) {
             revert ExistingCommitment();
         }
-        commitments[commitmentHash] = SponsorshipStatus.Pending;
+        _commitments[commitmentHash] = SponsorshipStatus.Pending;
 
         emit Sponsored(msg.sender, commitment.recipient, commitmentHash, commitment);
         return true;
@@ -177,7 +177,6 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      */
     function process(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
         address signer = _verify(commitment, signature);
-
         _authenticateHat(signer, hatId2());
 
         if (commitment.sponsoredTime + claimDelay > block.timestamp) {
@@ -194,11 +193,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        if (commitments[commitmentHash] != SponsorshipStatus.Pending) {
+        if (_commitments[commitmentHash] != SponsorshipStatus.Pending) {
         revert NotSponsored();
         }
 
-        commitments[commitmentHash] = SponsorshipStatus.Approved;
+        _commitments[commitmentHash] = SponsorshipStatus.Approved;
         emit Processed(msg.sender, commitment.recipient, commitmentHash);
         return true;
     }
@@ -218,11 +217,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        if (commitments[commitmentHash] != SponsorshipStatus.Approved) {
+        if (_commitments[commitmentHash] != SponsorshipStatus.Approved) {
         revert NotApproved();
         }
 
-        commitments[commitmentHash] = SponsorshipStatus.Claimed;
+        _commitments[commitmentHash] = SponsorshipStatus.Claimed;
 
         _claim(commitment);
 
@@ -308,6 +307,33 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
                 revert FailedExtraRewards(commitment.extraRewardToken, commitment.extraRewardAmount);
             }
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    ////                      VIEW & PURE
+    //////////////////////////////////////////////////////////////*/
+
+    function getDigest(Commitment memory commitment) public view returns (bytes32) {
+        return _hashTypedData(keccak256(abi.encode(
+            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
+            commitment.hatId,
+            commitment.shares,
+            commitment.loot,
+            commitment.extraRewardAmount,
+            commitment.completionDeadline,
+            commitment.sponsoredTime,
+            commitment.arweaveContentDigest,
+            commitment.recipient,
+            commitment.extraRewardToken
+        )));
+    }
+
+    function getCommitmentHash(Commitment memory commitment) public pure returns (bytes32) {
+        return keccak256(abi.encode(commitment));
+    }
+
+    function commitments(bytes32 commitmentHash) public view returns (SponsorshipStatus) {
+        return _commitments[commitmentHash];
     }
 
     /*//////////////////////////////////////////////////////////////
