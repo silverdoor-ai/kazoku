@@ -10,7 +10,7 @@ struct Commitment {
 
     /// @notice The ID of the hat that the recipient must be wearing.
     /// @dev If set to 0, there is no requirement for a hat.
-    uint256 hatId;
+    uint256 eligibleHat;
 
     /// @notice The number of shares to be minted for the recipient.
     /// @dev This is part of the reward that the recipient would get upon successful completion.
@@ -24,9 +24,9 @@ struct Commitment {
     /// @dev If set to 0, there are no additional rewards.
     uint256 extraRewardAmount;
 
-    /// @notice The UNIX timestamp by which the commitment must be completed.
-    /// @dev After this time, the commitment can no longer be processed, even if it is successful.
-    uint256 completionDeadline;
+    /// @notice A UNIX Timestamp element that represents the time factor of the commitment.
+    /// @dev The effect of the time factory can change from different Kazoku shamans.
+    uint256 timeFactor;
 
     /// @notice The UNIX timestamp when the sponsorship was created.
     /// @dev This is set automatically when the sponsor function is called.
@@ -34,7 +34,7 @@ struct Commitment {
 
     /// @notice The SHA-256 content digest hash of the proposal, usually stored in Arweave.
     /// @dev This is used as an identifier to retrieve the proposal details.
-    bytes32 arweaveContentDigest;
+    bytes32 contentDigest;
 
     /// @notice The address of the recipient of the sponsorship.
     /// @dev The person/entity that will receive the shares, loot, and possibly extra rewards.

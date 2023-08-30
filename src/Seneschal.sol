@@ -40,6 +40,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     error InvalidClaim();
     error InvalidSignature();
     error ExistingCommitment();
+    error InvalidPoke();
 
     /*//////////////////////////////////////////////////////////////
     ////                     EVENTS
@@ -58,6 +59,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
     event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
     event ClaimDelaySet(uint256 delay);
+    event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
 
     /*//////////////////////////////////////////////////////////////
     ////                   PUBLIC CONSTANTS
@@ -154,8 +156,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         address signer = _verify(commitment, signature);
         _authenticateHat(signer, hatId());
 
-        if (commitment.hatId != 0) {
-            _authenticateHat(commitment.recipient, commitment.hatId);
+        if (commitment.eligibleHat != 0) {
+            _authenticateHat(commitment.recipient, commitment.eligibleHat);
         }
 
         commitment.sponsoredTime = block.timestamp;
@@ -183,12 +185,12 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         revert ProcessedEarly();
         }
 
-        if (block.timestamp > commitment.completionDeadline) {
+        if (block.timestamp > commitment.timeFactor) {
         revert DeadlinePassed();
         }
 
-        if (commitment.hatId != 0) {
-            _authenticateHat(commitment.recipient, commitment.hatId);
+        if (commitment.eligibleHat != 0) {
+            _authenticateHat(commitment.recipient, commitment.eligibleHat);
         }
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
@@ -229,6 +231,21 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         return true;
     }
 
+    // @dev Allows a recipient to poke the contract to report completion of the sponsorship
+    // @param commitment contains all the details of the sponsorship
+    // @param completionReport the content digest identifier of the completion report
+    function poke(Commitment calldata commitment, bytes32 completionReport) public returns (bool) {
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        if (_commitments[commitmentHash] != SponsorshipStatus.Pending) {
+            revert NotSponsored();
+        }
+        if (commitment.recipient != msg.sender) {
+            revert InvalidPoke();
+        }
+        emit Poke(msg.sender, commitmentHash, completionReport);
+        return true;
+    }
+
     /*//////////////////////////////////////////////////////////////
     ////                   ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
@@ -263,14 +280,14 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param signature valid signature of the commitment by the signer
     function _verify(Commitment memory commitment, bytes memory signature) internal view returns (address) {
         bytes32 digest = _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
-            commitment.hatId,
+            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
+            commitment.eligibleHat,
             commitment.shares,
             commitment.loot,
             commitment.extraRewardAmount,
-            commitment.completionDeadline,
+            commitment.timeFactor,
             commitment.sponsoredTime,
-            commitment.arweaveContentDigest,
+            commitment.contentDigest,
             commitment.recipient,
             commitment.extraRewardToken
         )));
@@ -315,14 +332,14 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
     function getDigest(Commitment memory commitment) public view returns (bytes32) {
         return _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 completionDeadline,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
-            commitment.hatId,
+            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
+            commitment.eligibleHat,
             commitment.shares,
             commitment.loot,
             commitment.extraRewardAmount,
-            commitment.completionDeadline,
+            commitment.timeFactor,
             commitment.sponsoredTime,
-            commitment.arweaveContentDigest,
+            commitment.contentDigest,
             commitment.recipient,
             commitment.extraRewardToken
         )));

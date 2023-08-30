@@ -43,6 +43,7 @@ contract SeneschalTest is DeployImplementation, Test {
   error InvalidClaim();
   error InvalidSignature();
   error ExistingCommitment();
+  error InvalidPoke();
 
   /*//////////////////////////////////////////////////////////////
   ////                     EVENTS
@@ -61,6 +62,7 @@ contract SeneschalTest is DeployImplementation, Test {
 
     event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
     event ClaimDelaySet(uint256 delay);
+    event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
 
 
   function setUp() public virtual {
@@ -313,16 +315,16 @@ contract Deployment is WithInstanceTest {
   
   function test_sponsor() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -346,16 +348,16 @@ contract Deployment is WithInstanceTest {
 
   function test_sponsorBadSignerFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -374,16 +376,16 @@ contract Deployment is WithInstanceTest {
 
   function test_sponsorWithEligibility() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: eligibleHat,
+      eligibleHat: eligibleHat,
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: eligibleHatWearer,
                   extraRewardToken: address(0)
     });
@@ -407,16 +409,16 @@ contract Deployment is WithInstanceTest {
 
   function test_sponsorWithEligibilityFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: eligibleHat,
+      eligibleHat: eligibleHat,
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -435,16 +437,16 @@ contract Deployment is WithInstanceTest {
 
   function test_sponsorExistingCommitmentFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -461,16 +463,16 @@ contract Deployment is WithInstanceTest {
 
   function test_sponsorEvent() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: block.timestamp,
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -489,16 +491,16 @@ contract Deployment is WithInstanceTest {
 
   function test_process() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -532,16 +534,16 @@ contract Deployment is WithInstanceTest {
 
     function test_processLostEligibilityFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: eligibleHat,
+      eligibleHat: eligibleHat,
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: eligibleHatWearer,
                   extraRewardToken: address(0)
     });
@@ -580,16 +582,16 @@ contract Deployment is WithInstanceTest {
 
   function test_processTooEarlyFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -619,16 +621,16 @@ contract Deployment is WithInstanceTest {
 
   function test_processAfterDeadlineFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -660,16 +662,16 @@ contract Deployment is WithInstanceTest {
 
   function test_processNonSponsoredFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -691,16 +693,16 @@ contract Deployment is WithInstanceTest {
 
   function test_processEvent() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -736,16 +738,16 @@ contract Deployment is WithInstanceTest {
 
   function test_claim() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -791,16 +793,16 @@ contract Deployment is WithInstanceTest {
 
   function test_claimInvalidClaimFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -838,16 +840,16 @@ contract Deployment is WithInstanceTest {
 
   function test_claimNotApprovedFail() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -880,16 +882,16 @@ contract Deployment is WithInstanceTest {
 
   function test_claimEvent() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -929,16 +931,16 @@ contract Deployment is WithInstanceTest {
 
   function test_claimExtraReward() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _completionDeadline = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      hatId: uint256(0),
+      eligibleHat: uint256(0),
       shares: uint256(0),
         loot: uint256(0),
           extraRewardAmount: 1000 ether,
-            completionDeadline: _completionDeadline,
+            timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                arweaveContentDigest: bytes32("theSlug"),
+                contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
                   extraRewardToken: address(token)
     });
@@ -1001,6 +1003,103 @@ contract Deployment is WithInstanceTest {
     emit ClaimDelaySet(expected);
     shaman.setClaimDelay(newClaimDelay);
     vm.stopPrank();
+  }
+
+  function test_pokeEvent() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    vm.expectEmit(true, true, true, false);
+    emit Poke(nonWearer, shaman.getCommitmentHash(commitment), bytes32("The Report"));
+    vm.prank(nonWearer);
+    shaman.poke(commitment, bytes32("The Report"));
+
+  }
+
+  function test_pokeInvalidPokeFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    vm.expectRevert(InvalidPoke.selector);
+    shaman.poke(commitment, bytes32("The Report"));
+
+  }
+
+  function test_pokeNotSponsoredFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    vm.expectRevert(NotSponsored.selector);
+    shaman.poke(commitment, bytes32("The Report"));
+
   }
 
 }
