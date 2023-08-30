@@ -6,6 +6,8 @@ This repo contains the contracts for the following Shamans:
 
 - Hats Onboarding Shaman
 
+[The immutable args are set by the HatsModuleFactory.](https://github.com/Hats-Protocol/hats-module/blob/main/src/HatsModuleFactory.sol)
+
 ## Hats Onboarding Shaman
 
 A Baal manager shaman that allows onboarding, offboarding, and other DAO member management based on Hats Protocol hats. Members must wear the member hat to onboard or reboard, can be offboarded if they no longer wear the member hat, and kicked completely if they are in bad standing for the member hat. Onboarded members receive an initial share grant, and their shares are down-converted to loot when they are offboarded.

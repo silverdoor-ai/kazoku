@@ -14,7 +14,8 @@ import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
  * @author Haberdasher Labs
  * @author @spengrah
  * @dev This contract inherits from the HatsModule contract, and is meant to be deployed as a clone from the
- * HatsModuleFactory.
+ * HatsModuleFactory.  All immutable args are set by the factory.
+ * https://github.com/Hats-Protocol/hats-module/blob/main/src/HatsModuleFactory.sol
  */
 contract HatsOnboardingShaman is HatsModule {
   /*//////////////////////////////////////////////////////////////

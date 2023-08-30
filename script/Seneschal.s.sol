@@ -2,13 +2,13 @@
 pragma solidity ^0.8.18;
 
 import { Script, console2 } from "forge-std/Script.sol";
-import { HatsOnboardingShaman } from "../src/HatsOnboardingShaman.sol";
+import { Seneschal } from "../src/Seneschal.sol";
 import {
   HatsModuleFactory, deployModuleFactory, deployModuleInstance
 } from "hats-module/utils/DeployFunctions.sol";
 
 contract DeployImplementation is Script {
-  HatsOnboardingShaman public implementation;
+  Seneschal public implementation;
   bytes32 public SALT = keccak256("lets add some salt to this meal");
 
   // default values
@@ -26,37 +26,48 @@ contract DeployImplementation is Script {
     address deployer = vm.rememberKey(privKey);
     vm.startBroadcast(deployer);
 
-    implementation = new HatsOnboardingShaman{ salt: SALT}(version);
+    implementation = new Seneschal{ salt: SALT}(version);
 
     vm.stopBroadcast();
 
     if (verbose) {
-      console2.log("HatsOnboardingShaman:", address(implementation));
+      console2.log("Seneschal:", address(implementation));
     }
   }
 
-  // forge script script/HatsOnboardingShaman.s.sol:DeployImplementation -f ethereum --broadcast --verify
+  // forge script script/Seneschal.s.sol:DeployImplementation -f ethereum --broadcast --verify
 }
 
 contract DeployInstance is Script {
+
   HatsModuleFactory public factory;
-  address public implementation;
+
   address public instance;
-  uint256 public hatId;
+  address public implementation;
+
+  uint256 public sponsorHatId;
+  address public baal;
+  uint256 public ownerHat;
+  uint256 public processorHatId;
   bytes public otherImmutableArgs;
+
+  uint256 additiveDelay;
   bytes public initData;
+
   bool internal verbose = true;
   bool internal defaults = true;
 
   /// @dev override this to abi.encode (packed) other relevant immutable args (initialized and set within the function
   /// body). Alternatively, you can pass encoded data in
   function encodeImmutableArgs() internal virtual returns (bytes memory) {
-    // abi.encodePacked()...
+    otherImmutableArgs = abi.encodePacked(baal, sponsorHatId, processorHatId);
+    return otherImmutableArgs;
   }
 
   /// @dev override this to abi.encode (unpacked) the init data (initialized and set within the function body)
   function encodeInitData() internal virtual returns (bytes memory) {
-    // abi.encode()...
+    initData = abi.encode(additiveDelay);
+    return initData;
   }
 
   /// @dev override this to set the default values within the function body
@@ -70,14 +81,20 @@ contract DeployInstance is Script {
   function prepare(
     HatsModuleFactory _factory,
     address _implementation,
-    uint256 _hatId,
+    uint256 _sponsorHatId,
+    address _baal,
+    uint256 _ownerHat,
+    uint256 _processorHatId,
     bytes memory _otherImmutableArgs,
     bytes memory _initData,
     bool _verbose
   ) public {
     factory = _factory;
     implementation = _implementation;
-    hatId = _hatId;
+    sponsorHatId = _sponsorHatId;
+    baal = _baal;
+    ownerHat = _ownerHat;
+    processorHatId = _processorHatId;
     otherImmutableArgs = _otherImmutableArgs;
     initData = _initData;
     verbose = _verbose;
@@ -103,7 +120,7 @@ contract DeployInstance is Script {
     }
 
     // deploy the instance
-    instance = deployModuleInstance(factory, implementation, hatId, otherImmutableArgs, initData);
+    instance = deployModuleInstance(factory, implementation, sponsorHatId, otherImmutableArgs, initData);
 
     vm.stopBroadcast();
 
@@ -112,5 +129,5 @@ contract DeployInstance is Script {
     }
   }
 
-  // forge script script/HatsOnboardingShaman.s.sol:DeployInstance -f ethereum --broadcast --verify
+  // forge script script/Seneschal.s.sol:DeployInstance -f ethereum --broadcast --verify
 }
