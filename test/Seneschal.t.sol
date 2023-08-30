@@ -995,6 +995,61 @@ contract Deployment is WithInstanceTest {
     assertEq(actualExtraReward, expectedExtraReward);
   }
 
+  function test_claimExtraRewardERC20Fail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(0),
+        loot: uint256(0),
+          extraRewardAmount: 1000 ether,
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(token)
+    });
+
+    assertEq(shaman.extraRewardDebt(address(token)), 0);
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    assertEq(shaman.extraRewardDebt(address(token)), commitment.extraRewardAmount);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    shaman.process(commitment, signature);
+
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Approved;
+    assertEq(uint256(actual), uint256(expected));
+
+    signature = signFromUser(nonWearerPrivateKey, digest);
+
+    token.pause();
+    vm.expectRevert(
+      abi.encodeWithSelector(InvalidExtraRewards.selector, commitment.extraRewardToken, commitment.extraRewardAmount)
+    );
+    shaman.claim(commitment, signature);
+  }
+
   function test_sponsorExtraRewardFail() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
