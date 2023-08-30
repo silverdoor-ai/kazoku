@@ -32,7 +32,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     //////////////////////////////////////////////////////////////*/
 
     error NotAuth(uint256 hatId);
-    error FailedExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
+    error InvalidExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
+    error InvalidClear(SponsorshipStatus status, uint256 timeFactor);
     error NotApproved();
     error NotSponsored();
     error ProcessedEarly();
@@ -56,7 +57,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         address indexed processor,
         address indexed recipient,
         bytes32 indexed commitmentHash);
-
+    
+    event Cleared(bytes32 indexed commitmentHash);
     event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
     event ClaimDelaySet(uint256 delay);
     event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
@@ -100,9 +102,13 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
       return _getArgUint256(92);
     }
 
+    // @notice returns the hatId of the sponsor hat
+    function getSponsorHat() public pure returns (uint256) {
+      return _getArgUint256(40);
+    }
+
     // @notice returns the hatId of the processor hat
-    // note that hatId() returns the hatId of the sponsor hat
-    function hatId2() public pure returns (uint256) {
+    function getProcessorHat() public pure returns (uint256) {
       return _getArgUint256(124);
     }
 
@@ -112,6 +118,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      */
     IBaalToken public SHARES_TOKEN;
     IBaalToken public LOOT_TOKEN;
+
+    mapping (address tokenContract => uint256 totalExtraRewards) private _extraRewardDebt;
 
     uint256 public claimDelay;
 
@@ -154,10 +162,20 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      */
     function sponsor(Commitment memory commitment, bytes calldata signature) public returns (bool) {
         address signer = _verify(commitment, signature);
-        _authenticateHat(signer, hatId());
+        _authenticateHat(signer, getSponsorHat());
 
         if (commitment.eligibleHat != 0) {
             _authenticateHat(commitment.recipient, commitment.eligibleHat);
+        }
+
+        if (commitment.extraRewardAmount > 0) {
+            address extraRewardToken = commitment.extraRewardToken;
+            uint256 rewardTokenDebt = extraRewardDebt(commitment.extraRewardToken);
+            rewardTokenDebt += commitment.extraRewardAmount;
+            if (rewardTokenDebt > IERC20(extraRewardToken).balanceOf(address(this))) {
+                revert InvalidExtraRewards(extraRewardToken, commitment.extraRewardAmount);
+            }
+            _extraRewardDebt[extraRewardToken] = rewardTokenDebt;
         }
 
         commitment.sponsoredTime = block.timestamp;
@@ -179,7 +197,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      */
     function process(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
         address signer = _verify(commitment, signature);
-        _authenticateHat(signer, hatId2());
+        _authenticateHat(signer, getProcessorHat());
 
         if (commitment.sponsoredTime + claimDelay > block.timestamp) {
         revert ProcessedEarly();
@@ -246,6 +264,23 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         return true;
     }
 
+    // @dev Allows anyone to clear a commitment that has failed
+    // @param commitment contains all the details of the sponsorship
+    function clear(Commitment calldata commitment) public returns (bool) {
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+
+        // time factor is the deadline for the commitment
+        SponsorshipStatus status = _commitments[commitmentHash];
+        if (status != SponsorshipStatus.Pending && commitment.timeFactor < block.timestamp) {
+            revert InvalidClear(status, commitment.timeFactor);
+        }
+
+        _commitments[commitmentHash] = SponsorshipStatus.Failed;
+        _extraRewardDebt[commitment.extraRewardToken] -= commitment.extraRewardAmount;
+        emit Cleared(commitmentHash);
+        return true;
+    }
+
     /*//////////////////////////////////////////////////////////////
     ////                   ACCESS CONTROL
     //////////////////////////////////////////////////////////////*/
@@ -280,7 +315,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param signature valid signature of the commitment by the signer
     function _verify(Commitment memory commitment, bytes memory signature) internal view returns (address) {
         bytes32 digest = _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
+            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 contentDigest,address recipient,address extraRewardToken)"),
             commitment.eligibleHat,
             commitment.shares,
             commitment.loot,
@@ -319,10 +354,12 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
 
         if (commitment.extraRewardAmount > 0 && commitment.extraRewardToken != address(0)) {
-            bool success = IERC20(commitment.extraRewardToken).transfer(commitment.recipient, commitment.extraRewardAmount);
+            address extraRewardToken = commitment.extraRewardToken;
+            bool success = IERC20(extraRewardToken).transfer(commitment.recipient, commitment.extraRewardAmount);
             if (!success) {
-                revert FailedExtraRewards(commitment.extraRewardToken, commitment.extraRewardAmount);
+                revert InvalidExtraRewards(extraRewardToken, commitment.extraRewardAmount);
             }
+            _extraRewardDebt[extraRewardToken] -= commitment.extraRewardAmount;
         }
     }
 
@@ -330,9 +367,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     ////                      VIEW & PURE
     //////////////////////////////////////////////////////////////*/
 
+    // @dev Returns the correct EIP712 hash digest of the commitment
+    // @param commitment contains all the details of the sponsorship
     function getDigest(Commitment memory commitment) public view returns (bytes32) {
         return _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 hatId,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 arweaveContentDigest,address recipient,address extraRewardToken)"),
+            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 contentDigest,address recipient,address extraRewardToken)"),
             commitment.eligibleHat,
             commitment.shares,
             commitment.loot,
@@ -345,12 +384,22 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         )));
     }
 
+    // @dev Returns the commitment hash
+    // @param commitment contains all the details of the sponsorship
     function getCommitmentHash(Commitment memory commitment) public pure returns (bytes32) {
         return keccak256(abi.encode(commitment));
     }
 
+    // @dev Returns the status of a commitment
+    // @param commitmentHash the hash of the commitment
     function commitments(bytes32 commitmentHash) public view returns (SponsorshipStatus) {
         return _commitments[commitmentHash];
+    }
+
+    // @dev Returns the total amount of extra rewards owed to recipients
+    // @param tokenContract the address of the extra reward token
+    function extraRewardDebt(address tokenContract) public view returns (uint256) {
+        return _extraRewardDebt[tokenContract];
     }
 
     /*//////////////////////////////////////////////////////////////

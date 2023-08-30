@@ -64,5 +64,9 @@ enum SponsorshipStatus {
 
     /// @notice The state indicating that the rewards for the sponsorship have been claimed by the recipient.
     /// @dev In this state, the sponsorship lifecycle is considered complete.
-    Claimed
+    Claimed,
+
+    /// @notice The state indicating that the commitment has failed.
+    /// @dev This state blocks signature replay attacks.
+    Failed
 }
