@@ -22,6 +22,9 @@ abstract contract HatsModuleEIP712 {
     bytes32 internal constant _DOMAIN_TYPEHASH =
         0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
+    // bytes4(keccak256("isValidSignature(bytes32,bytes)")
+    bytes4 internal constant EIP1271_MAGICVALUE = 0x1626ba7e;
+
     address private _cachedThis;
     uint256 private _cachedChainId;
     bytes32 private _cachedNameHash;
@@ -181,6 +184,24 @@ abstract contract HatsModuleEIP712 {
             mstore(add(m, 0x60), chainid())
             mstore(add(m, 0x80), address())
             separator := keccak256(m, 0xa0)
+        }
+    }
+
+    /**
+     * @dev Divides bytes signature into `uint8 v, bytes32 r, bytes32 s`.
+     * @param signature The signature bytes
+     */
+    function _splitSignature(
+        bytes memory signature
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        // The signature format is a compact form of:
+        //   {bytes32 r}{bytes32 s}{uint8 v}
+        // Compact means, uint8 is not padded to 32 bytes.
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            v := byte(0, mload(add(signature, 0x60)))
         }
     }
 

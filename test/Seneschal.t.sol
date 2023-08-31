@@ -45,24 +45,23 @@ contract SeneschalTest is DeployImplementation, Test {
   error InvalidSignature();
   error ExistingCommitment();
   error InvalidPoke();
+  error PokedEarly();
+  error InvalidContractSigner();
+  error InvalidMagicValue();
 
   /*//////////////////////////////////////////////////////////////
   ////                     EVENTS
   //////////////////////////////////////////////////////////////*/
 
   event Sponsored(
-        address indexed sponsor,
-        address indexed recipient,
-        bytes32 indexed commitmentHash,
-        Commitment commitment);
+    address indexed sponsor,
+    bytes32 indexed commitmentHash,
+    Commitment commitment);
 
-  event Processed(
-      address indexed processor,
-      address indexed recipient,
-      bytes32 indexed commitmentHash);
+  event Processed(bytes32 indexed commitmentHash);
 
-  event Cleared(bytes32 indexed commitmentHash);
-  event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
+  event Cleared(address indexed clearedBy, bytes32 indexed commitmentHash);
+  event Claimed(bytes32 indexed commitmentHash);
   event ClaimDelaySet(uint256 delay);
   event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
 
@@ -489,7 +488,7 @@ contract Deployment is WithInstanceTest {
     bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
 
     vm.expectEmit(true, true, true, true);
-    emit Sponsored(sponsorHatWearer, nonWearer, shaman.getCommitmentHash(commitment), commitment);
+    emit Sponsored(sponsorHatWearer, shaman.getCommitmentHash(commitment), commitment);
 
     shaman.sponsor(commitment, signature);
 
@@ -734,8 +733,8 @@ contract Deployment is WithInstanceTest {
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    vm.expectEmit(true, true, true, false);
-    emit Processed(processorHatWearer, nonWearer, shaman.getCommitmentHash(commitment));
+    vm.expectEmit(true, false, false, false);
+    emit Processed(shaman.getCommitmentHash(commitment));
     shaman.process(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
@@ -931,7 +930,7 @@ contract Deployment is WithInstanceTest {
     signature = signFromUser(nonWearerPrivateKey, digest);
 
     vm.expectEmit(true, true, false, false);
-    emit Claimed(nonWearer, shaman.getCommitmentHash(commitment));
+    emit Claimed(shaman.getCommitmentHash(commitment));
     shaman.claim(commitment, signature);
   }
 
@@ -984,7 +983,7 @@ contract Deployment is WithInstanceTest {
     signature = signFromUser(nonWearerPrivateKey, digest);
 
     vm.expectEmit(true, true, false, false);
-    emit Claimed(nonWearer, shaman.getCommitmentHash(commitment));
+    emit Claimed(shaman.getCommitmentHash(commitment));
     shaman.claim(commitment, signature);
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1247,11 +1246,50 @@ contract Deployment is WithInstanceTest {
     SponsorshipStatus expected = SponsorshipStatus.Pending;
     assertEq(uint256(actual), uint256(expected));
 
+    vm.warp(block.timestamp + _claimDelay + 1);
+
     vm.expectEmit(true, true, true, false);
     emit Poke(nonWearer, shaman.getCommitmentHash(commitment), bytes32("The Report"));
     vm.prank(nonWearer);
     shaman.poke(commitment, bytes32("The Report"));
 
+  }
+
+  function test_pokePokedEarlyFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    vm.expectRevert(PokedEarly.selector);
+    vm.prank(nonWearer);
+    shaman.poke(commitment, bytes32("The Report"));
   }
 
   function test_pokeInvalidPokeFail() public {

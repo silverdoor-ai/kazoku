@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-// import { console2 } from "forge-std/Test.sol"; // remove before deploy
 import { HatsModule } from "hats-module/HatsModule.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
 import { HatsModuleEIP712 } from "src/HatsModuleEIP712.sol";
 import { ECDSA } from "solady/utils/ECDSA.sol";
 import { IERC20 } from "src/dep/IERC20.sol";
+import { IERC1271 } from "src/dep/IERC1271.sol";
 import { Commitment, SponsorshipStatus } from "src/CommitmentStructs.sol";
 
 /**
@@ -42,6 +42,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     error InvalidSignature();
     error ExistingCommitment();
     error InvalidPoke();
+    error PokedEarly();
+    error InvalidContractSigner();
+    error InvalidMagicValue();
 
     /*//////////////////////////////////////////////////////////////
     ////                     EVENTS
@@ -49,17 +52,13 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
     event Sponsored(
         address indexed sponsor,
-        address indexed recipient,
         bytes32 indexed commitmentHash,
         Commitment commitment);
 
-    event Processed(
-        address indexed processor,
-        address indexed recipient,
-        bytes32 indexed commitmentHash);
+    event Processed(bytes32 indexed commitmentHash);
     
-    event Cleared(bytes32 indexed commitmentHash);
-    event Claimed(address indexed recipient, bytes32 indexed commitmentHash);
+    event Cleared(address indexed clearedBy, bytes32 indexed commitmentHash);
+    event Claimed(bytes32 indexed commitmentHash);
     event ClaimDelaySet(uint256 delay);
     event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
 
@@ -160,9 +159,23 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * @param commitment contains all the details of the sponsorship
      * @param signature valid signature of the commitment by the sponsor
      */
-    function sponsor(Commitment memory commitment, bytes calldata signature) public returns (bool) {
-        address signer = _verify(commitment, signature);
-        _authenticateHat(signer, getSponsorHat());
+    function sponsor(Commitment memory commitment, bytes memory signature) public returns (bool) {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        (v, r, s) = _splitSignature(signature);
+        address signer;
+
+        if (v == 0) {
+            signer = address(uint160(uint256(r)));
+            _authenticateHat(signer, getSponsorHat());
+            _verifyContractSignature(getDigest(commitment), r, s, v, signer, signature);
+        }
+
+        else {
+            signer = _verifySigner(commitment, signature);
+            _authenticateHat(signer, getSponsorHat());
+        }
 
         if (commitment.eligibleHat != 0) {
             _authenticateHat(commitment.recipient, commitment.eligibleHat);
@@ -181,12 +194,13 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         commitment.sponsoredTime = block.timestamp;
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
+
         if (_commitments[commitmentHash] != SponsorshipStatus.Empty) {
             revert ExistingCommitment();
         }
         _commitments[commitmentHash] = SponsorshipStatus.Pending;
 
-        emit Sponsored(signer, commitment.recipient, commitmentHash, commitment);
+        emit Sponsored(signer, commitmentHash, commitment);
         return true;
     }
 
@@ -196,8 +210,10 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * @param signature valid signature of the commitment by the processor
      */
     function process(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
-        address signer = _verify(commitment, signature);
-        _authenticateHat(signer, getProcessorHat());
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+        if (_commitments[commitmentHash] != SponsorshipStatus.Pending) {
+        revert NotSponsored();
+        }
 
         if (commitment.sponsoredTime + claimDelay > block.timestamp) {
         revert ProcessedEarly();
@@ -207,18 +223,30 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         revert DeadlinePassed();
         }
 
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        (v, r, s) = _splitSignature(signature);
+        address signer;
+
+        if (v == 0) {
+            signer = address(uint160(uint256(r)));
+            _authenticateHat(signer, getProcessorHat());
+            _verifyContractSignature(getDigest(commitment), r, s, v, signer, signature);
+        }
+
+        else {
+            signer = _verifySigner(commitment, signature);
+            _authenticateHat(signer, getProcessorHat());
+        }
+
         if (commitment.eligibleHat != 0) {
             _authenticateHat(commitment.recipient, commitment.eligibleHat);
         }
 
-        bytes32 commitmentHash = keccak256(abi.encode(commitment));
-
-        if (_commitments[commitmentHash] != SponsorshipStatus.Pending) {
-        revert NotSponsored();
-        }
-
         _commitments[commitmentHash] = SponsorshipStatus.Approved;
-        emit Processed(signer, commitment.recipient, commitmentHash);
+
+        emit Processed(commitmentHash);
         return true;
     }
 
@@ -230,10 +258,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * @param signature valid signature of the commitment by the recipient
      */
     function claim(Commitment calldata commitment, bytes calldata signature) public returns (bool) {
-        address signer = _verify(commitment, signature);
-        if (signer != commitment.recipient) {
-        revert InvalidClaim();
-        }
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        (v, r, s) = _splitSignature(signature);
+        address signer;
 
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
@@ -243,9 +272,24 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         _commitments[commitmentHash] = SponsorshipStatus.Claimed;
 
+        if (v == 0) {
+            signer = address(uint160(uint256(r)));
+            if (signer != commitment.recipient) {
+                revert InvalidClaim();
+            }
+            _verifyContractSignature(getDigest(commitment), r, s, v, signer, signature);
+        }
+
+        else {
+            signer = _verifySigner(commitment, signature);
+            if (signer != commitment.recipient) {
+                revert InvalidClaim();
+            }
+        }
+
         _claim(commitment);
 
-        emit Claimed(signer, commitmentHash);
+        emit Claimed(commitmentHash);
         return true;
     }
 
@@ -260,6 +304,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         if (commitment.recipient != msg.sender) {
             revert InvalidPoke();
         }
+
+        if (block.timestamp < commitment.sponsoredTime + claimDelay) {
+            revert PokedEarly();
+        }
+
         emit Poke(msg.sender, commitmentHash, completionReport);
         return true;
     }
@@ -277,7 +326,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         _commitments[commitmentHash] = SponsorshipStatus.Failed;
         _extraRewardDebt[commitment.extraRewardToken] -= commitment.extraRewardAmount;
-        emit Cleared(commitmentHash);
+        emit Cleared(msg.sender, commitmentHash);
         return true;
     }
 
@@ -313,19 +362,8 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // signer from the digest.
     // @param commitment contains all the details of the sponsorship
     // @param signature valid signature of the commitment by the signer
-    function _verify(Commitment memory commitment, bytes memory signature) internal view returns (address) {
-        bytes32 digest = _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 contentDigest,address recipient,address extraRewardToken)"),
-            commitment.eligibleHat,
-            commitment.shares,
-            commitment.loot,
-            commitment.extraRewardAmount,
-            commitment.timeFactor,
-            commitment.sponsoredTime,
-            commitment.contentDigest,
-            commitment.recipient,
-            commitment.extraRewardToken
-        )));
+    function _verifySigner(Commitment memory commitment, bytes memory signature) internal view returns (address) {
+        bytes32 digest = getDigest(commitment);
 
         address signer = digest.recover(signature);
         if (signer == address(0)) {
@@ -333,6 +371,39 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         }
 
         return signer;
+    }
+
+    /**
+     * @dev Checks whether the signature provided is valid for the provided hash, complies with EIP-1271. A signature is valid if:
+     *  - It's a valid EIP-1271 signature by a contract wearing the specified hat
+     * @param digest Hash of the data (could be either a message hash or transaction hash)
+     * @param r ECDSA signature parameter r
+     * @param s ECDSA signature parameter s
+     * @param v ECDSA signature parameter v
+     */
+    function _verifyContractSignature(
+        bytes32 digest,
+        bytes32 r,
+        bytes32 s,
+        uint8 v,
+        address signer,
+        bytes memory signature) internal view {
+
+        // The signature data to pass for validation to the contract is appended to the signature and the offset is stored in s
+        bytes memory contractSignature;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            contractSignature := add(add(signature, s), 0x20) // add 0x20 to skip over the length of the bytes array
+        }
+
+        bytes4 magicValue = IERC1271(signer).isValidSignature(
+                digest,
+                contractSignature
+            );
+        if (magicValue != EIP1271_MAGICVALUE) {
+            revert InvalidContractSigner();
+        }
+
     }
 
     // @dev Mints the shares, loot, and extra rewards to the recipient
