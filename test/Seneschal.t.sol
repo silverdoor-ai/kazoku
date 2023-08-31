@@ -15,6 +15,7 @@ import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
 import { IBaalSummoner } from "baal/interfaces/IBaalSummoner.sol";
 import { Commitment, SponsorshipStatus } from "src/CommitmentStructs.sol";
 import { Token } from "test/mocks/Token.sol";
+import { ContractAccount } from "test/mocks/ContractAccount.sol";
 
 contract SeneschalTest is DeployImplementation, Test {
 
@@ -81,6 +82,7 @@ contract WithInstanceTest is SeneschalTest {
 
   HatsModuleFactory public factory;
   Seneschal public shaman;
+  ContractAccount contractAccount;
   uint256 public hatId;
   uint256 public hatId2;
   bytes public otherImmutableArgs;
@@ -227,6 +229,8 @@ contract WithInstanceTest is SeneschalTest {
       tophat,
       processorHat,
       additiveDelay);
+
+    contractAccount = new ContractAccount();
 
     token.mint(address(shaman), 1000 ether);
 
@@ -1348,6 +1352,97 @@ contract Deployment is WithInstanceTest {
     vm.expectRevert(NotSponsored.selector);
     shaman.poke(commitment, bytes32("The Report"));
 
+  }
+
+  function test_contractSigner() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 r = bytes32(uint256(uint160(address(contractAccount))));
+    bytes32 s = shaman.getDigest(commitment);
+    uint8 v = 0;
+
+    bytes memory signature = abi.encode(r, s, v);
+    vm.prank(dao);
+    HATS.mintHat(sponsorHat, address(contractAccount));
+
+    contractAccount.authorizeDigest(s);
+
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    shaman.process(commitment, signature);
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Approved;
+    assertEq(uint256(actual), uint256(expected));
+
+    signature = signFromUser(nonWearerPrivateKey, digest);
+    shaman.claim(commitment, signature);
+
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Claimed;
+    assertEq(uint256(actual), uint256(expected));
+
+    uint256 expectedShareBalance = commitment.shares;
+    uint256 expectedLootBalance = commitment.loot;
+
+    assertEq(sharesToken.balanceOf(nonWearer), expectedShareBalance);
+    assertEq(lootToken.balanceOf(nonWearer), expectedLootBalance);
+  }
+
+  function test_contractSignerInvalidContractSignerFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 r = bytes32(uint256(uint160(address(contractAccount))));
+    bytes32 s = shaman.getDigest(commitment);
+    uint8 v = 0;
+
+    bytes memory signature = abi.encode(r, s, v);
+    vm.prank(dao);
+    HATS.mintHat(sponsorHat, address(contractAccount));
+
+    vm.expectRevert(InvalidContractSigner.selector);
+    shaman.sponsor(commitment, signature);
   }
 
 }

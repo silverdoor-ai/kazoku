@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import { console2 } from "forge-std/Test.sol";
+
 import { HatsModule } from "hats-module/HatsModule.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
@@ -390,11 +392,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         bytes memory signature) internal view {
 
         // The signature data to pass for validation to the contract is appended to the signature and the offset is stored in s
-        bytes memory contractSignature;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            contractSignature := add(add(signature, s), 0x20) // add 0x20 to skip over the length of the bytes array
-        }
+        bytes memory contractSignature = abi.encode(s);
 
         bytes4 magicValue = IERC1271(signer).isValidSignature(
                 digest,
