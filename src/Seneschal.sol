@@ -147,7 +147,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         LOOT_TOKEN = IBaalToken(BAAL().lootToken());
 
         uint256 additiveDelay = abi.decode(_initData, (uint256));
-        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod() + 3 days;
+        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
         emit ClaimDelaySet(claimDelay);
         __init_EIP712();
     }
@@ -171,7 +171,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         if (v == 0) {
             signer = address(uint160(uint256(r)));
             _authenticateHat(signer, getSponsorHat());
-            _verifyContractSignature(getDigest(commitment), r, s, v, signer, signature);
+            _verifyContractSignature(getDigest(commitment), s, signer);
         }
 
         else {
@@ -234,7 +234,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         if (v == 0) {
             signer = address(uint160(uint256(r)));
             _authenticateHat(signer, getProcessorHat());
-            _verifyContractSignature(getDigest(commitment), r, s, v, signer, signature);
+            _verifyContractSignature(getDigest(commitment), s, signer);
         }
 
         else {
@@ -279,7 +279,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             if (signer != commitment.recipient) {
                 revert InvalidClaim();
             }
-            _verifyContractSignature(getDigest(commitment), r, s, v, signer, signature);
+            _verifyContractSignature(getDigest(commitment), s, signer);
         }
 
         else {
@@ -379,17 +379,10 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
      * @dev Checks whether the signature provided is valid for the provided hash, complies with EIP-1271. A signature is valid if:
      *  - It's a valid EIP-1271 signature by a contract wearing the specified hat
      * @param digest Hash of the data (could be either a message hash or transaction hash)
-     * @param r ECDSA signature parameter r
      * @param s ECDSA signature parameter s
-     * @param v ECDSA signature parameter v
+
      */
-    function _verifyContractSignature(
-        bytes32 digest,
-        bytes32 r,
-        bytes32 s,
-        uint8 v,
-        address signer,
-        bytes memory signature) internal view {
+    function _verifyContractSignature(bytes32 digest, bytes32 s, address signer) internal view {
 
         // The signature data to pass for validation to the contract is appended to the signature and the offset is stored in s
         bytes memory contractSignature = abi.encode(s);
