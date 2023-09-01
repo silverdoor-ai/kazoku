@@ -51,7 +51,7 @@ struct Commitment {
 /// @dev The SponsorshipStatus enum helps track the lifecycle of a sponsorship and is integral for business logic within the contract.
 enum SponsorshipStatus {
 
-    /// @notice The default state of the sponsorship before it is created.
+    /// @notice The default state before it is sponsored.
     Empty,
 
     /// @notice The initial state of the sponsorship when it is created.
