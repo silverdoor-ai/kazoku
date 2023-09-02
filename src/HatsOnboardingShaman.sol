@@ -109,7 +109,7 @@ contract HatsOnboardingShaman is HatsModule {
   /**
    * @inheritdoc HatsModule
    */
-  function setUp(bytes calldata _initData) public override initializer {
+  function _setUp(bytes calldata _initData) internal override {
     SHARES_TOKEN = IBaalToken(BAAL().sharesToken());
     LOOT_TOKEN = IBaalToken(BAAL().lootToken());
 
