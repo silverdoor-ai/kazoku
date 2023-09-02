@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import { console2 } from "forge-std/Test.sol";
-
 import { HatsModule } from "hats-module/HatsModule.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
@@ -339,9 +337,12 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     function clearExpired(Commitment calldata commitment) public returns (bool) {
         bytes32 commitmentHash = keccak256(abi.encode(commitment));
 
-        // time factor is the deadline for the commitment
+        // expiration time is the expiration of a completed commitment
         SponsorshipStatus status = _commitments[commitmentHash];
-        if (status != SponsorshipStatus.Approved && commitment.expirationTime < block.timestamp)
+        if (commitment.expirationTime > block.timestamp ||
+            status == SponsorshipStatus.Empty ||
+            status == SponsorshipStatus.Failed ||
+            status == SponsorshipStatus.Claimed)
         {
             revert InvalidClear(status, commitment.expirationTime);
         }
@@ -453,13 +454,14 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param commitment contains all the details of the sponsorship
     function getDigest(Commitment memory commitment) public view returns (bytes32) {
         return _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,bytes32 contentDigest,address recipient,address extraRewardToken)"),
+            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,uint256 expirationTime,bytes32 contentDigest,address recipient,address extraRewardToken)"),
             commitment.eligibleHat,
             commitment.shares,
             commitment.loot,
             commitment.extraRewardAmount,
             commitment.timeFactor,
             commitment.sponsoredTime,
+            commitment.expirationTime,
             commitment.contentDigest,
             commitment.recipient,
             commitment.extraRewardToken
