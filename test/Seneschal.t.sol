@@ -49,6 +49,7 @@ contract SeneschalTest is DeployImplementation, Test {
   error PokedEarly();
   error InvalidContractSigner();
   error InvalidMagicValue();
+  error Expired();
 
   /*//////////////////////////////////////////////////////////////
   ////                     EVENTS
@@ -334,7 +335,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -367,7 +369,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -395,7 +398,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: eligibleHatWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                      expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -428,7 +432,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                        expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -456,7 +461,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -482,7 +488,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: block.timestamp,
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                      expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -510,7 +517,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -553,7 +561,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: eligibleHatWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                      expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -601,7 +610,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -640,7 +650,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -681,7 +692,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     // This line below is very important; because the original commitment is modified during contract execution
@@ -712,7 +724,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -757,7 +770,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -812,7 +826,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -859,7 +874,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -901,7 +917,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -950,7 +967,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(token)
+                  extraRewardToken: address(token),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1010,7 +1028,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(token)
+                  extraRewardToken: address(token),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1065,7 +1084,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(token)
+                  extraRewardToken: address(token),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1117,7 +1137,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(token)
+                  extraRewardToken: address(token),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1153,7 +1174,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(token)
+                  extraRewardToken: address(token),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1230,7 +1252,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -1271,7 +1294,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -1308,7 +1332,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -1345,7 +1370,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     vm.expectRevert(NotSponsored.selector);
@@ -1366,7 +1392,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 r = bytes32(uint256(uint160(address(contractAccount))));
@@ -1406,7 +1433,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1457,7 +1485,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 r = bytes32(uint256(uint160(address(contractAccount))));
@@ -1485,7 +1514,8 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: address(contractAccount),
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1547,8 +1577,11 @@ contract Deployment is WithInstanceTest {
              sponsoredTime: uint256(0),
                 contentDigest: bytes32("theSlug"),
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
+    
+    
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -1584,6 +1617,55 @@ contract Deployment is WithInstanceTest {
     contractAccount.authorizeDigest(digest);
 
     vm.expectRevert(InvalidClaim.selector);
+    shaman.claim(commitment, signature);
+  }
+
+  function test_claimAfterExpirationFail() public {
+    uint256 _claimDelay = shaman.claimDelay();
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+
+    Commitment memory commitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(0),
+                contentDigest: bytes32("theSlug"),
+                 recipient: nonWearer,
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days )
+    });
+
+    bytes32 digest = shaman.getDigest(commitment);
+
+    bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
+    shaman.sponsor(commitment, signature);
+
+    // This line below is very important; because the original commitment is modified during contract execution
+    // The contract stores the current block timestamp in the commitment's sponsored time attribute
+    // Since the commitment is enforced by hash; and requires signing it's really important to update the commitment
+    commitment.sponsoredTime = block.timestamp;
+
+    bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
+    SponsorshipStatus actual = shaman.commitments(commitmentHash);
+    SponsorshipStatus expected = SponsorshipStatus.Pending;
+    assertEq(uint256(actual), uint256(expected));
+
+    digest = shaman.getDigest(commitment);
+    signature = signFromUser(processorHatWearerPrivateKey, digest);
+
+    vm.warp(block.timestamp + 1 hours + _claimDelay);
+
+    shaman.process(commitment, signature);
+    actual = shaman.commitments(commitmentHash);
+    expected = SponsorshipStatus.Approved;
+    assertEq(uint256(actual), uint256(expected));
+
+    signature = signFromUser(nonWearerPrivateKey, digest);
+    vm.warp(commitment.expirationTime + 1);
+
+    vm.expectRevert(Expired.selector);
     shaman.claim(commitment, signature);
   }
 

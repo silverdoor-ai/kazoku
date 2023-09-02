@@ -47,6 +47,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     error PokedEarly();
     error InvalidContractSigner();
     error InvalidMagicValue();
+    error Expired();
 
     /*//////////////////////////////////////////////////////////////
     ////                     EVENTS
@@ -289,6 +290,9 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             }
         }
 
+        if (commitment.expirationTime < block.timestamp) {
+            revert Expired();
+        }
         _claim(commitment);
 
         emit Claimed(commitmentHash);
@@ -324,6 +328,22 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         SponsorshipStatus status = _commitments[commitmentHash];
         if (status != SponsorshipStatus.Pending && commitment.timeFactor < block.timestamp) {
             revert InvalidClear(status, commitment.timeFactor);
+        }
+
+        _commitments[commitmentHash] = SponsorshipStatus.Failed;
+        _extraRewardDebt[commitment.extraRewardToken] -= commitment.extraRewardAmount;
+        emit Cleared(msg.sender, commitmentHash);
+        return true;
+    }
+
+    function clearExpired(Commitment calldata commitment) public returns (bool) {
+        bytes32 commitmentHash = keccak256(abi.encode(commitment));
+
+        // time factor is the deadline for the commitment
+        SponsorshipStatus status = _commitments[commitmentHash];
+        if (status != SponsorshipStatus.Approved && commitment.expirationTime < block.timestamp)
+        {
+            revert InvalidClear(status, commitment.expirationTime);
         }
 
         _commitments[commitmentHash] = SponsorshipStatus.Failed;

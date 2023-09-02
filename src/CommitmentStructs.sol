@@ -32,6 +32,10 @@ struct Commitment {
     /// @dev This is set automatically when the sponsor function is called.
     uint256 sponsoredTime;
 
+    /// @notice The UNIX timestamp when the commitment can no longer be claimed.
+    /// @dev This is manual but must adhere to social and legal requirements
+    uint256 expirationTime;
+
     /// @notice The SHA-256 content digest hash of the proposal, usually stored in Arweave.
     /// @dev This is used as an identifier to retrieve the proposal details.
     bytes32 contentDigest;
