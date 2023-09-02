@@ -59,13 +59,12 @@ contract SeneschalTest is DeployImplementation, Test {
     bytes32 indexed commitmentHash,
     Commitment commitment);
 
-  event Processed(bytes32 indexed commitmentHash);
+  event Processed(address indexed processor, bytes32 indexed commitmentHash);
 
   event Cleared(address indexed clearedBy, bytes32 indexed commitmentHash);
   event Claimed(bytes32 indexed commitmentHash);
   event ClaimDelaySet(uint256 delay);
   event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
-
 
   function setUp() public virtual {
     // create and activate a fork, at BLOCK_NUMBER
@@ -737,8 +736,8 @@ contract Deployment is WithInstanceTest {
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    vm.expectEmit(true, false, false, false);
-    emit Processed(shaman.getCommitmentHash(commitment));
+    vm.expectEmit(true, true, false, false);
+    emit Processed(processorHatWearer, shaman.getCommitmentHash(commitment));
     shaman.process(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;

@@ -57,7 +57,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         bytes32 indexed commitmentHash,
         Commitment commitment);
 
-    event Processed(bytes32 indexed commitmentHash);
+    event Processed(address indexed processor, bytes32 indexed commitmentHash);
     
     event Cleared(address indexed clearedBy, bytes32 indexed commitmentHash);
     event Claimed(bytes32 indexed commitmentHash);
@@ -248,7 +248,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
 
         _commitments[commitmentHash] = SponsorshipStatus.Approved;
 
-        emit Processed(commitmentHash);
+        emit Processed(signer, commitmentHash);
         return true;
     }
 

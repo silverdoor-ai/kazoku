@@ -43,6 +43,7 @@ struct Commitment {
     /// @notice The ERC20 token address for additional rewards.
     /// @dev If set to address(0), there are no additional token rewards.
     address extraRewardToken;
+
 }
 
 
