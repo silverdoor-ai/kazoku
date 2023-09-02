@@ -9,7 +9,7 @@ import {
 
 contract DeployImplementation is Script {
   Seneschal public implementation;
-  bytes32 public SALT = keccak256("lets add some salt to this meal");
+  bytes32 public SALT = keccak256("Seneschal rules the estate");
 
   // default values
   string public version = "0.1.0"; // increment with each deploy
@@ -40,18 +40,18 @@ contract DeployImplementation is Script {
 
 contract DeployInstance is Script {
 
-  HatsModuleFactory public factory;
+  HatsModuleFactory public factory = HatsModuleFactory(vm.envAddress("HATS_MODULE_FACTORY"));
 
   address public instance;
-  address public implementation;
+  address public implementation = vm.envAddress("IMPLEMENTATION");
 
-  uint256 public sponsorHatId;
-  address public baal;
-  uint256 public ownerHat;
-  uint256 public processorHatId;
+  uint256 public sponsorHatId = vm.envUint("SPONSOR_HAT_ID");
+  address public baal = vm.envAddress("BAAL");
+  uint256 public ownerHat = vm.envUint("OWNER_HAT");
+  uint256 public processorHatId = vm.envUint("PROCESSOR_HAT_ID");
   bytes public otherImmutableArgs;
 
-  uint256 additiveDelay;
+  uint256 additiveDelay = vm.envUint("ADDITIVE_DELAY");
   bytes public initData;
 
   bool internal verbose = true;
@@ -109,15 +109,10 @@ contract DeployInstance is Script {
     address deployer = vm.rememberKey(privKey);
     vm.startBroadcast(deployer);
 
-    // if {prepare} was not called, then use the default values and encode the data
-    if (defaults) {
-      // set the default values
-      setDefaultValues();
-      // encode the other immutable args
-      otherImmutableArgs = encodeImmutableArgs();
-      // encode the init data
-      initData = encodeInitData();
-    }
+    // encode the other immutable args
+    otherImmutableArgs = encodeImmutableArgs();
+    // encode the init data
+    initData = encodeInitData();
 
     // deploy the instance
     instance = deployModuleInstance(factory, implementation, sponsorHatId, otherImmutableArgs, initData);

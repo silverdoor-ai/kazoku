@@ -318,7 +318,7 @@ contract Deployment is WithInstanceTest {
   }
 
   function test_additiveDelay() public {
-    uint256 _claimDelay = additiveDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + 3 days;
+    uint256 _claimDelay = additiveDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod();
     assertEq(shaman.claimDelay(), _claimDelay);
   }
   
