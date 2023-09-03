@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.18;
 
-import { Script, console2 } from "forge-std/Script.sol";
+import { Script, console2, VmSafe } from "forge-std/Script.sol";
 import { Seneschal } from "../src/Seneschal.sol";
 import {
   HatsModuleFactory, deployModuleFactory, deployModuleInstance

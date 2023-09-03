@@ -454,7 +454,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param commitment contains all the details of the sponsorship
     function getDigest(Commitment memory commitment) public view returns (bytes32) {
         return _hashTypedData(keccak256(abi.encode(
-            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,uint256 expirationTime,bytes32 contentDigest,address recipient,address extraRewardToken)"),
+            keccak256("Commitment(uint256 eligibleHat,uint256 shares,uint256 loot,uint256 extraRewardAmount,uint256 timeFactor,uint256 sponsoredTime,uint256 expirationTime,string contextURL,address recipient,address extraRewardToken)"),
             commitment.eligibleHat,
             commitment.shares,
             commitment.loot,
@@ -462,7 +462,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             commitment.timeFactor,
             commitment.sponsoredTime,
             commitment.expirationTime,
-            commitment.contentDigest,
+            commitment.contextURL,
             commitment.recipient,
             commitment.extraRewardToken
         )));

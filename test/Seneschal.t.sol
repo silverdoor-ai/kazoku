@@ -333,7 +333,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -367,7 +367,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -396,7 +396,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: eligibleHatWearer,
                   extraRewardToken: address(0),
                       expirationTime : uint256(3650 days + block.timestamp)
@@ -430,7 +430,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                         expirationTime : uint256(3650 days + block.timestamp)
@@ -459,7 +459,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -486,7 +486,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: block.timestamp,
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                       expirationTime : uint256(3650 days + block.timestamp)
@@ -515,7 +515,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -559,7 +559,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: eligibleHatWearer,
                   extraRewardToken: address(0),
                       expirationTime : uint256(3650 days + block.timestamp)
@@ -608,7 +608,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -648,7 +648,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -690,7 +690,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -722,7 +722,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -768,7 +768,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -824,7 +824,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -872,7 +872,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -915,7 +915,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -965,7 +965,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1026,7 +1026,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1082,7 +1082,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1135,7 +1135,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1172,7 +1172,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1250,7 +1250,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1292,7 +1292,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1330,7 +1330,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1368,7 +1368,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1390,7 +1390,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1431,7 +1431,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1483,7 +1483,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1512,7 +1512,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: address(contractAccount),
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1575,7 +1575,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1631,7 +1631,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1680,7 +1680,7 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1731,7 +1731,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                expirationTime : uint256(3650 days + block.timestamp),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -1781,7 +1781,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
               expirationTime : uint256(3650 days + block.timestamp),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -1815,7 +1815,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
               expirationTime : uint256(3650 days + block.timestamp),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });
@@ -1836,7 +1836,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 expirationTime : uint256(3650 days + block.timestamp),
-                contentDigest: bytes32("theSlug"),
+                contextURL: "theSlug",
                  recipient: nonWearer,
                   extraRewardToken: address(0)
     });

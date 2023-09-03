@@ -36,9 +36,9 @@ struct Commitment {
     /// @dev This is manual but must adhere to social and legal requirements
     uint256 expirationTime;
 
-    /// @notice The SHA-256 content digest hash of the proposal, usually stored in Arweave.
+    /// @notice URL linking the commitment on chain to the commitment off chain.
     /// @dev This is used as an identifier to retrieve the proposal details.
-    bytes32 contentDigest;
+    string contextURL;
 
     /// @notice The address of the recipient of the sponsorship.
     /// @dev The person/entity that will receive the shares, loot, and possibly extra rewards.
