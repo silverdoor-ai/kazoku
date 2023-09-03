@@ -16,6 +16,8 @@ contract SeneschalSponsor is Script {
     string public contextURL = "https://mirror.xyz/ethdaily.eth/Jo47vaxEpV7jBTw7g6doxSB7i7Ogctppuc9N7nWRPPA";
 
     address public deployerAddress = 0x87002DEbA8A7a0194870CfE2309F6C018Ad01AE8;
+    
+    uint256 public amount = 101 ether;
 
     uint8 public v;
     bytes32 public r;
@@ -26,8 +28,8 @@ contract SeneschalSponsor is Script {
 
     Commitment public commitment = Commitment({
       eligibleHat: uint256(0),
-      shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
+      shares: amount,
+        loot: amount,
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
@@ -39,24 +41,88 @@ contract SeneschalSponsor is Script {
 
     bytes32 public digest = shaman.getDigest(commitment);
 
-    function run() public {
+    function run() public virtual {
     uint256 privKey = vm.envUint("PRIVATE_KEY");
     address deployer = vm.rememberKey(privKey);
     vm.startBroadcast(deployer);
 
     (v, r, s) = vmSafe.sign(privKey, digest);
     bytes memory signature = abi.encodePacked(r, s, v);
-
+        
+        console2.log("Timestamp 1: ", block.timestamp);
     shaman.sponsor(commitment, signature);
+    console2.log("Timestamp 2: ", block.timestamp);
 
     vm.stopBroadcast();
+
     // forge script script/SeneschalActions.s.sol:SeneschalSponsor -f gnosis --broadcast
   }
-
 }
 
 contract SeneschalProcess is SeneschalSponsor {
 
+    Commitment public nextCommitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: amount,
+        loot: amount,
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(1693702920),
+                expirationTime : uint256(3650 days + block.timestamp),
+                contextURL: contextURL,
+                 recipient: deployerAddress,
+                  extraRewardToken: address(0)
+    });
 
+    bytes32 public nextDigest = shaman.getDigest(nextCommitment);
+
+    function run() public override {
+    uint256 privKey = vm.envUint("PRIVATE_KEY");
+    address deployer = vm.rememberKey(privKey);
+    vm.startBroadcast(deployer);
+
+    (v, r, s) = vmSafe.sign(privKey, nextDigest);
+    bytes memory signature = abi.encodePacked(r, s, v);
+
+    shaman.process(nextCommitment, signature);
+
+    vm.stopBroadcast();
+
+    // forge script script/SeneschalActions.s.sol:SeneschalProcess -f gnosis --broadcast
+  }
+
+}
+
+contract SeneschalClaim is SeneschalSponsor {
+
+    Commitment public nextCommitment = Commitment({
+      eligibleHat: uint256(0),
+      shares: amount,
+        loot: amount,
+          extraRewardAmount: uint256(0),
+            timeFactor: _timeFactor,
+             sponsoredTime: uint256(1693702920),
+                expirationTime : uint256(3650 days + block.timestamp),
+                contextURL: contextURL,
+                 recipient: deployerAddress,
+                  extraRewardToken: address(0)
+    });
+
+    bytes32 public nextDigest = shaman.getDigest(nextCommitment);
+
+    function run() public override {
+    uint256 privKey = vm.envUint("PRIVATE_KEY");
+    address deployer = vm.rememberKey(privKey);
+    vm.startBroadcast(deployer);
+
+    (v, r, s) = vmSafe.sign(privKey, nextDigest);
+    bytes memory signature = abi.encodePacked(r, s, v);
+
+    shaman.claim(nextCommitment, signature);
+
+    vm.stopBroadcast();
+
+    // forge script script/SeneschalActions.s.sol:SeneschalClaim -f gnosis --broadcast
+  }
 
 }
