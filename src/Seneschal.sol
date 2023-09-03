@@ -462,7 +462,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
             commitment.timeFactor,
             commitment.sponsoredTime,
             commitment.expirationTime,
-            commitment.contextURL,
+            keccak256(bytes(commitment.contextURL)),
             commitment.recipient,
             commitment.extraRewardToken
         )));

@@ -17,7 +17,7 @@ contract SeneschalSponsor is Script {
 
     address public deployerAddress = 0x87002DEbA8A7a0194870CfE2309F6C018Ad01AE8;
     
-    uint256 public amount = 101 ether;
+    uint256 public amount = 95 ether;
 
     uint8 public v;
     bytes32 public r;
@@ -48,10 +48,12 @@ contract SeneschalSponsor is Script {
 
     (v, r, s) = vmSafe.sign(privKey, digest);
     bytes memory signature = abi.encodePacked(r, s, v);
-        
-        console2.log("Timestamp 1: ", block.timestamp);
+
     shaman.sponsor(commitment, signature);
-    console2.log("Timestamp 2: ", block.timestamp);
+
+        console2.log("Digest: ");
+    console2.logBytes32(digest);
+        console2.logBytes(signature);
 
     vm.stopBroadcast();
 
