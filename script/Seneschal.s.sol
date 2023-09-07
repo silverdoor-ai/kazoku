@@ -9,7 +9,9 @@ import {
 
 contract DeployImplementation is Script {
   Seneschal public implementation;
-  bytes32 public SALT = keccak256("Seneschal rules the estate");
+
+  string public saltyString = vm.envString("SALT");
+  bytes32 public SALT = keccak256(bytes(saltyString));
 
   // default values
   string public version = "0.1.0"; // increment with each deploy
@@ -31,11 +33,11 @@ contract DeployImplementation is Script {
     vm.stopBroadcast();
 
     if (verbose) {
-      console2.log("Seneschal:", address(implementation));
+      console2.log("Seneschal: ", address(implementation));
     }
   }
 
-  // forge script script/Seneschal.s.sol:DeployImplementation -f ethereum --broadcast --verify
+  // forge script script/Seneschal.s.sol:DeployImplementation -f gnosis --broadcast --verify
 }
 
 contract DeployInstance is Script {
@@ -120,9 +122,9 @@ contract DeployInstance is Script {
     vm.stopBroadcast();
 
     if (verbose) {
-      console2.log("Instance:", instance);
+      console2.log("Instance: ", instance);
     }
   }
 
-  // forge script script/Seneschal.s.sol:DeployInstance -f ethereum --broadcast --verify
+  // forge script script/Seneschal.s.sol:DeployInstance -f gnosis --broadcast --verify
 }
