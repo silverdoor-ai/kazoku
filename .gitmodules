@@ -8,3 +8,6 @@
 [submodule "lib/hats-module"]
 	path = lib/hats-module
 	url = https://github.com/Hats-Protocol/hats-module
+[submodule "lib/Baal"]
+	path = lib/Baal
+	url = https://github.com/Moloch-Mystics/Baal
