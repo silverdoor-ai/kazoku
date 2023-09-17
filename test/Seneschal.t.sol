@@ -1224,7 +1224,7 @@ contract Deployment is WithInstanceTest {
     vm.stopPrank();
 
     uint256 actual = shaman.claimDelay();
-    uint256 expected = IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + 6 days;
+    uint256 expected = IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + newClaimDelay;
     assertEq(actual, expected);
   }
 

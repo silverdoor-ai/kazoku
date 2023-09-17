@@ -146,7 +146,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         LOOT_TOKEN = IBaalToken(BAAL().lootToken());
 
         uint256 additiveDelay = abi.decode(_initData, (uint256));
-        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
+        claimDelay = additiveDelay;
         emit ClaimDelaySet(claimDelay);
         __init_EIP712();
     }
@@ -216,7 +216,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
         revert NotSponsored();
         }
 
-        if (commitment.sponsoredTime + claimDelay > block.timestamp) {
+        if (commitment.sponsoredTime + getClaimDelay() > block.timestamp) {
         revert ProcessedEarly();
         }
 
@@ -363,7 +363,7 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param additiveDelay the amount of time to add to the voting and grace periods
     function setClaimDelay(uint256 additiveDelay) public {
         _authenticateHat(msg.sender, OWNER_HAT());
-        claimDelay = additiveDelay + BAAL().votingPeriod() + BAAL().gracePeriod() + 3 days;
+        claimDelay = additiveDelay;
         emit ClaimDelaySet(claimDelay);
     }
 
@@ -484,6 +484,11 @@ contract Seneschal is HatsModule, HatsModuleEIP712 {
     // @param tokenContract the address of the extra reward token
     function extraRewardDebt(address tokenContract) public view returns (uint256) {
         return _extraRewardDebt[tokenContract];
+    }
+
+    // @dev Returns the claim delay including the voting and grace periods
+    function getClaimDelay() public view returns (uint256) {
+        return claimDelay + BAAL().votingPeriod() + BAAL().gracePeriod();
     }
 
     /*//////////////////////////////////////////////////////////////
