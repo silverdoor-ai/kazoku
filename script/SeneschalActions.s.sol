@@ -14,6 +14,7 @@ contract SeneschalSponsor is Script {
     Seneschal public shaman = Seneschal(instance);
 
     string public contextURL = "https://mirror.xyz/ethdaily.eth/Jo47vaxEpV7jBTw7g6doxSB7i7Ogctppuc9N7nWRPPA";
+    string public metadataString = "ipfs://blahblah";
 
     address public deployerAddress = 0x87002DEbA8A7a0194870CfE2309F6C018Ad01AE8;
     
@@ -35,6 +36,7 @@ contract SeneschalSponsor is Script {
              sponsoredTime: uint256(0),
                 expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: contextURL,
+                metadata: metadataString,
                  recipient: deployerAddress,
                   extraRewardToken: address(0)
     });
@@ -72,6 +74,7 @@ contract SeneschalProcess is SeneschalSponsor {
              sponsoredTime: uint256(1693702920),
                 expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: contextURL,
+                metadata: metadataString,
                  recipient: deployerAddress,
                   extraRewardToken: address(0)
     });
@@ -106,6 +109,7 @@ contract SeneschalClaim is SeneschalSponsor {
              sponsoredTime: uint256(1693702920),
                 expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: contextURL,
+                metadata: metadataString,
                  recipient: deployerAddress,
                   extraRewardToken: address(0)
     });

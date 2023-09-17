@@ -40,6 +40,10 @@ struct Commitment {
     /// @dev This is used as an identifier to retrieve the proposal details.
     string contextURL;
 
+    /// @notice The metadata of the commitment.
+    /// @dev This is used to store additional information about the commitment.
+    string metadata;
+
     /// @notice The address of the recipient of the sponsorship.
     /// @dev The person/entity that will receive the shares, loot, and possibly extra rewards.
     address recipient;

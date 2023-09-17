@@ -38,6 +38,7 @@ contract SeneschalTest is DeployImplementation, Test {
   error NotAuth(uint256 hatId);
   error InvalidExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
   error InvalidClear(SponsorshipStatus status, uint256 timeFactor);
+  error NoBalance(address extraRewardToken, uint256 extraRewardAmount, uint256 balance, uint256 debt);
   error NotApproved();
   error NotSponsored();
   error ProcessedEarly();
@@ -334,6 +335,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -368,6 +370,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -390,16 +393,17 @@ contract Deployment is WithInstanceTest {
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
-      eligibleHat: eligibleHat,
+      eligibleHat: uint256(0),
       shares: uint256(1000 ether),
         loot: uint256(1000 ether),
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
-                 recipient: eligibleHatWearer,
+                metadata: "ipfs://metadata",
+                 recipient: nonWearer,
                   extraRewardToken: address(0),
-                      expirationTime : uint256(3650 days + block.timestamp)
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -431,9 +435,10 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
-                        expirationTime : uint256(3650 days + block.timestamp)
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -460,6 +465,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -477,7 +483,7 @@ contract Deployment is WithInstanceTest {
 
   function test_sponsorEvent() public {
     uint256 _claimDelay = shaman.claimDelay();
-    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
+    uint256 _timeFactor = block.timestamp + 1 days + _claimDelay + baal.votingPeriod() + baal.gracePeriod();
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
@@ -487,9 +493,10 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: block.timestamp,
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
-                      expirationTime : uint256(3650 days + block.timestamp)
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -516,6 +523,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -560,9 +568,10 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: eligibleHatWearer,
                   extraRewardToken: address(0),
-                      expirationTime : uint256(3650 days + block.timestamp)
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
 
@@ -609,6 +618,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -649,6 +659,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -691,6 +702,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -723,6 +735,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -769,6 +782,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -825,6 +839,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -873,6 +888,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -916,6 +932,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -960,12 +977,13 @@ contract Deployment is WithInstanceTest {
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
-      shares: uint256(0),
-        loot: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1021,12 +1039,13 @@ contract Deployment is WithInstanceTest {
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
-      shares: uint256(0),
-        loot: uint256(0),
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
           extraRewardAmount: 1000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1075,14 +1094,17 @@ contract Deployment is WithInstanceTest {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
+    token.mint(address(shaman), 2000 ether);
+
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
-      shares: uint256(0),
-        loot: uint256(0),
-          extraRewardAmount: 1000 ether,
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: 2000 ether,
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(token),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1118,8 +1140,15 @@ contract Deployment is WithInstanceTest {
     digest = shaman.getDigest(commitment);
     signature = signFromUser(sponsorHatWearerPrivateKey, digest);
 
+    uint256 extraRewardDebt = shaman.extraRewardDebt(address(token));
+
     vm.expectRevert(
-      abi.encodeWithSelector(InvalidExtraRewards.selector, commitment.extraRewardToken, commitment.extraRewardAmount)
+      abi.encodeWithSelector(
+        NoBalance.selector,
+        commitment.extraRewardToken,
+        commitment.extraRewardAmount,
+        token.balanceOf(address(shaman)),
+        extraRewardDebt)
     );
     shaman.sponsor(commitment, signature);
   }
@@ -1130,14 +1159,15 @@ contract Deployment is WithInstanceTest {
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
-      shares: uint256(0),
-        loot: uint256(0),
-          extraRewardAmount: 1000 ether,
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
-                  extraRewardToken: address(token),
+                  extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
     });
 
@@ -1167,14 +1197,15 @@ contract Deployment is WithInstanceTest {
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
-      shares: uint256(0),
-        loot: uint256(0),
-          extraRewardAmount: 1000 ether,
+      shares: uint256(1000 ether),
+        loot: uint256(1000 ether),
+          extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
-                  extraRewardToken: address(token),
+                  extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
     });
 
@@ -1251,6 +1282,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1293,6 +1325,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1331,6 +1364,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1369,6 +1403,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1391,6 +1426,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1432,6 +1468,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1484,6 +1521,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1513,6 +1551,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: address(contractAccount),
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1576,6 +1615,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1632,6 +1672,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1681,6 +1722,7 @@ contract Deployment is WithInstanceTest {
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
                   extraRewardToken: address(0),
                    expirationTime : uint256(3650 days + block.timestamp)
@@ -1730,10 +1772,11 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-               expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1780,10 +1823,11 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-              expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1814,10 +1858,11 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-              expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     vm.expectRevert(abi.encodeWithSelector(InvalidClear.selector, uint256(0), commitment.expirationTime));
@@ -1835,10 +1880,11 @@ contract Deployment is WithInstanceTest {
           extraRewardAmount: uint256(0),
             timeFactor: _timeFactor,
              sponsoredTime: uint256(0),
-                expirationTime : uint256(3650 days + block.timestamp),
                 contextURL: "theSlug",
+                metadata: "ipfs://metadata",
                  recipient: nonWearer,
-                  extraRewardToken: address(0)
+                  extraRewardToken: address(0),
+                   expirationTime : uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
