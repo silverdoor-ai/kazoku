@@ -7,7 +7,7 @@ This repo contains the contracts for the following Shamans:
 - Seneschal
 
 ---
-## Seneschal
+### Seneschal
 
 Manages sponsorships for token distributions, with specific deliverables. It allows hat wearers to sponsor projects,
 processors to mark the sponsorship as complete, and recipients to claim their tokens at any future date.
@@ -27,6 +27,18 @@ This repo uses Foundry for development and testing. To get started:
 `forge coverage --report lcov` then `genhtml -o report --branch-coverage lcov.info` navigate to the "report" folder and preview index.html
 
 ---
+## Deployment
+
+1. Copy the `env.example` file as `.env` and add all of the environment variables except IMPLEMENTATION and INSTANCE.
+2. From the command line run `source .env` to load your environment variables.
+3. For deploying on Gnosis mainnet run `forge script script/Seneschal.s.sol:DeployImplementation -f gnosis --broadcast --verify` This will deploy the Seneschal implementation contract.
+4. Update your `.env` file with the IMPLEMENTATION address.
+5. You may have to flatten the Seneschal contract in order to manually verify on GnosisScan: run `forge flatten --output src/Contract.flattened.sol src/Seneschal.sol` to output the flattened contract in the src folder.
+5. Run `forge script script/Seneschal.s.sol:DeployInstance -f gnosis --broadcast --verify` to deploy the Seneschal instance contract from the HatsModuleFactory.
+6. Go to [DAOHaus](https://admin.daohaus.club/) and navigate to your DAO.
+7. Go to the "Proposals" tab select "New Proposal" -> "Advanced" -> "Add Shaman" and initiate a DAO vote to add the Seneschal Shaman contract!
+
+After the vote passes the Seneschal Shaman will be added to your DAO and you can start using it!
 ## Gotchas
 
 [The immutable args are set by the HatsModuleFactory.](https://github.com/Hats-Protocol/hats-module/blob/main/src/HatsModuleFactory.sol)
@@ -36,7 +48,7 @@ This repo uses Foundry for development and testing. To get started:
 **Seneschal** - A Baal manager shaman that facilitates token distribution sponsorships.
 
 ## Contract Overview
-The `Seneschal` contract allows sponsors to commit to token distribution sponsorships with specific deliverables. Witnesses can mark these sponsorships as completed, and once approved, the recipient can claim their tokens.
+The `Seneschal` contract allows sponsors to commit to token distribution sponsorships with specific deliverables. Witnesses can mark these sponsorships as completed, and once approved, the recipient can claim their tokens.  The contract enforces that commitments are not sponsored, witnessed and claimed faster than the DAO has time to react.  The claim delay is added dynamically to the DAOs voting and grace periods and witnesses must wait until after that period to 
 
 The contract handles:
 1. Sponsorship commitments by sponsors.

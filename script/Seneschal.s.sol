@@ -47,7 +47,7 @@ contract DeployInstance is Script {
   uint256 public sponsorHatId = vm.envUint("SPONSOR_HAT_ID");
   address public baal = vm.envAddress("BAAL");
   uint256 public ownerHat = vm.envUint("OWNER_HAT");
-  uint256 public witnessHatId = vm.envUint("PROCESSOR_HAT_ID");
+  uint256 public witnessHatId = vm.envUint("WITNESS_HAT_ID");
   bytes public otherImmutableArgs;
 
   uint256 additiveDelay = vm.envUint("ADDITIVE_DELAY");
