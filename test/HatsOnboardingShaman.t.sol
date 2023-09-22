@@ -5,10 +5,7 @@ import { Test, console2 } from "forge-std/Test.sol";
 import { HatsOnboardingShaman } from "../src/HatsOnboardingShaman.sol";
 import { DeployImplementation } from "../script/HatsOnboardingShaman.s.sol";
 import {
-  IHats,
-  HatsModuleFactory,
-  deployModuleFactory,
-  deployModuleInstance
+  IHats, HatsModuleFactory, deployModuleFactory, deployModuleInstance
 } from "hats-module/utils/DeployFunctions.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";

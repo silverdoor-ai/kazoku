@@ -5,10 +5,7 @@ import { Test, console2 } from "forge-std/Test.sol";
 import { Seneschal } from "../src/Seneschal.sol";
 import { DeployImplementation } from "../script/Seneschal.s.sol";
 import {
-  IHats,
-  HatsModuleFactory,
-  deployModuleFactory,
-  deployModuleInstance
+  IHats, HatsModuleFactory, deployModuleFactory, deployModuleInstance
 } from "hats-module/utils/DeployFunctions.sol";
 import { IBaal } from "baal/interfaces/IBaal.sol";
 import { IBaalToken } from "baal/interfaces/IBaalToken.sol";
@@ -18,7 +15,6 @@ import { Token } from "test/mocks/Token.sol";
 import { ContractAccount } from "test/mocks/ContractAccount.sol";
 
 contract SeneschalTest is DeployImplementation, Test {
-
   // variables inherited from DeployImplementation script
   // HatsOnboardingShaman public implementation;
   // bytes32 public SALT;
@@ -37,11 +33,11 @@ contract SeneschalTest is DeployImplementation, Test {
 
   error NotAuth(uint256 hatId);
   error InvalidExtraRewards(address extraRewardToken, uint256 extraRewardAmount);
-  error InvalidClear(SponsorshipStatus status, uint256 timeFactor);
   error NoBalance(address extraRewardToken, uint256 extraRewardAmount, uint256 balance, uint256 debt);
+  error InvalidClear(SponsorshipStatus status, uint256 timeFactor);
   error NotApproved();
   error NotSponsored();
-  error ProcessedEarly();
+  error WitnessedEarly();
   error DeadlinePassed();
   error InvalidClaim();
   error InvalidSignature();
@@ -53,20 +49,17 @@ contract SeneschalTest is DeployImplementation, Test {
   error Expired();
 
   /*//////////////////////////////////////////////////////////////
-  ////                     EVENTS
-  //////////////////////////////////////////////////////////////*/
+    ////                     EVENTS
+    //////////////////////////////////////////////////////////////*/
 
-  event Sponsored(
-    address indexed sponsor,
-    bytes32 indexed commitmentHash,
-    Commitment commitment);
+  event Sponsored(address indexed sponsor, bytes32 indexed commitmentHash, Commitment commitment);
 
-  event Processed(address indexed processor, bytes32 indexed commitmentHash);
+  event Witnessed(address indexed witness, bytes32 indexed commitmentHash);
 
   event Cleared(address indexed clearedBy, bytes32 indexed commitmentHash);
   event Claimed(bytes32 indexed commitmentHash);
   event ClaimDelaySet(uint256 delay);
-  event Poke(address indexed recipient, bytes32 indexed commitmentHash, bytes32 completionReport);
+  event Poke(address indexed recipient, bytes32 indexed commitmentHash, string completionReport);
 
   function setUp() public virtual {
     // create and activate a fork, at BLOCK_NUMBER
@@ -80,7 +73,6 @@ contract SeneschalTest is DeployImplementation, Test {
 }
 
 contract WithInstanceTest is SeneschalTest {
-
   HatsModuleFactory public factory;
   Seneschal public shaman;
   ContractAccount contractAccount;
@@ -99,7 +91,7 @@ contract WithInstanceTest is SeneschalTest {
 
   uint256 public tophat;
   uint256 public sponsorHat;
-  uint256 public processorHat;
+  uint256 public witnessHat;
   uint256 public eligibleHat;
   uint256 public additiveDelay = 1 days;
   address public eligibility = makeAddr("eligibility");
@@ -107,8 +99,8 @@ contract WithInstanceTest is SeneschalTest {
   address public dao = makeAddr("dao");
   uint256 public sponsorHatWearerPrivateKey = uint256(1);
   address public sponsorHatWearer = vm.addr(sponsorHatWearerPrivateKey);
-  uint256 public processorHatWearerPrivateKey = uint256(2);
-  address public processorHatWearer = vm.addr(processorHatWearerPrivateKey);
+  uint256 public witnessHatWearerPrivateKey = uint256(2);
+  address public witnessHatWearer = vm.addr(witnessHatWearerPrivateKey);
   uint256 public eligibleHatWearerPrivateKey = uint256(3);
   address public eligibleHatWearer = vm.addr(eligibleHatWearerPrivateKey);
   uint256 public nonWearerPrivateKey = uint256(4);
@@ -123,19 +115,16 @@ contract WithInstanceTest is SeneschalTest {
     address _baal,
     uint256 _sponsorHatId,
     uint256 _ownerHat,
-    uint256 _processorHatId,
-    uint256 _additiveDelay)
-    public
-    returns (Seneschal)
-  {
+    uint256 _witnessHatId,
+    uint256 _additiveDelay
+  ) public returns (Seneschal) {
     // encode the other immutable args as packed bytes
-    otherImmutableArgs = abi.encodePacked(_baal, _ownerHat, _processorHatId);
+    otherImmutableArgs = abi.encodePacked(_baal, _ownerHat, _witnessHatId);
     // encoded the initData as unpacked bytes -- for Seneschal, we just need any non-empty bytes
     initData = abi.encode(_additiveDelay);
     // deploy the instance
-    return Seneschal(
-      deployModuleInstance(factory, address(implementation), _sponsorHatId, otherImmutableArgs, initData)
-    );
+    return
+      Seneschal(deployModuleInstance(factory, address(implementation), _sponsorHatId, otherImmutableArgs, initData));
   }
 
   function deployBaalWithShaman(string memory _name, string memory _symbol, bytes32 _saltNonce, address _shaman)
@@ -200,10 +189,10 @@ contract WithInstanceTest is SeneschalTest {
     tophat = HATS.mintTopHat(dao, "tophat", "dao.eth/tophat");
     vm.startPrank(dao);
     sponsorHat = HATS.createHat(tophat, "sponsorHat", 50, eligibility, toggle, true, "dao.eth/sponsorHat");
-    processorHat = HATS.createHat(tophat, "processorHat", 50, eligibility, toggle, true, "dao.eth/processorHat");
+    witnessHat = HATS.createHat(tophat, "witnessHat", 50, eligibility, toggle, true, "dao.eth/witnessHat");
     eligibleHat = HATS.createHat(tophat, "eligibleHat", 50, eligibility, toggle, true, "dao.eth/eligibleHat");
     HATS.mintHat(sponsorHat, sponsorHatWearer);
-    HATS.mintHat(processorHat, processorHatWearer);
+    HATS.mintHat(witnessHat, witnessHatWearer);
     HATS.mintHat(eligibleHat, eligibleHatWearer);
     vm.stopPrank();
 
@@ -211,11 +200,9 @@ contract WithInstanceTest is SeneschalTest {
     predictedBaalAddress = predictBaalAddress(SALT);
 
     // predict the shaman's address via the hats module factory
-    predictedShamanAddress =
-      factory.getHatsModuleAddress(
-        address(implementation),
-        sponsorHat,
-        abi.encodePacked(predictedBaalAddress, tophat, processorHat));
+    predictedShamanAddress = factory.getHatsModuleAddress(
+      address(implementation), sponsorHat, abi.encodePacked(predictedBaalAddress, tophat, witnessHat)
+    );
 
     // deploy a test baal with the predicted shaman address
     baal = deployBaalWithShaman("TEST_BAAL", "TEST_BAAL", SALT, predictedShamanAddress);
@@ -224,12 +211,7 @@ contract WithInstanceTest is SeneschalTest {
     lootToken = IBaalToken(baal.lootToken());
 
     // deploy the shaman instance
-    shaman = deployInstance(
-      predictedBaalAddress,
-      sponsorHat,
-      tophat,
-      processorHat,
-      additiveDelay);
+    shaman = deployInstance(predictedBaalAddress, sponsorHat, tophat, witnessHat, additiveDelay);
 
     contractAccount = new ContractAccount();
 
@@ -246,7 +228,6 @@ contract WithInstanceTest is SeneschalTest {
 }
 
 contract Deployment is WithInstanceTest {
-
   function testDeployment() public {
     // check that the shaman was deployed at the predicted address
     assertEq(address(shaman), predictedShamanAddress);
@@ -275,12 +256,7 @@ contract Deployment is WithInstanceTest {
     uint256 expectedClaimDelay = claimDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod() + 3 days;
     emit ClaimDelaySet(expectedClaimDelay);
 
-    shaman = deployInstance(
-      predictedBaalAddress,
-      sponsorHat + 1,
-      tophat,
-      processorHat + 1,
-      additiveDelay);
+    shaman = deployInstance(predictedBaalAddress, sponsorHat + 1, tophat, witnessHat + 1, additiveDelay);
   }
 
   function test_version() public {
@@ -295,8 +271,8 @@ contract Deployment is WithInstanceTest {
     assertEq(shaman.hatId(), sponsorHat);
   }
 
-  function test_processorHat() public {
-    assertEq(shaman.getProcessorHat(), processorHat);
+  function test_witnessHat() public {
+    assertEq(shaman.getWitnessHat(), witnessHat);
   }
 
   function test_ownerHat() public {
@@ -305,14 +281,14 @@ contract Deployment is WithInstanceTest {
 
   function test_eip712Domain() public {
     (
-            bytes1 fields,
-            string memory name,
-            string memory version,
-            uint256 chainId,
-            address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
-        ) = shaman.eip712Domain();
+      bytes1 fields,
+      string memory name,
+      string memory version,
+      uint256 chainId,
+      address verifyingContract,
+      bytes32 salt,
+      uint256[] memory extensions
+    ) = shaman.eip712Domain();
 
     assertEq(name, "Seneschal");
     assertEq(version, "1.0");
@@ -322,7 +298,7 @@ contract Deployment is WithInstanceTest {
     uint256 _claimDelay = additiveDelay + IBaal(baal).votingPeriod() + IBaal(baal).gracePeriod();
     assertEq(shaman.claimDelay(), _claimDelay);
   }
-  
+
   function test_sponsor() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
@@ -330,17 +306,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -365,25 +340,22 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
     bytes memory signature = signFromUser(nonWearerPrivateKey, digest);
 
-    vm.expectRevert(
-    abi.encodeWithSelector(NotAuth.selector, sponsorHat
-    ));
+    vm.expectRevert(abi.encodeWithSelector(NotAuth.selector, sponsorHat));
 
     shaman.sponsor(commitment, signature);
   }
@@ -395,17 +367,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -430,25 +401,22 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: eligibleHat,
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
     bytes memory signature = signFromUser(sponsorHatWearerPrivateKey, digest);
 
-    vm.expectRevert(
-    abi.encodeWithSelector(NotAuth.selector, eligibleHat
-    ));
+    vm.expectRevert(abi.encodeWithSelector(NotAuth.selector, eligibleHat));
 
     shaman.sponsor(commitment, signature);
   }
@@ -460,17 +428,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -488,17 +455,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: block.timestamp,
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: block.timestamp,
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -508,27 +474,25 @@ contract Deployment is WithInstanceTest {
     emit Sponsored(sponsorHatWearer, shaman.getCommitmentHash(commitment), commitment);
 
     shaman.sponsor(commitment, signature);
-
   }
 
-  function test_process() public {
+  function test_witness() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -546,34 +510,33 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
   }
 
-    function test_processLostEligibilityFail() public {
+  function test_witnessLostEligibilityFail() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: eligibleHat,
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: eligibleHatWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: eligibleHatWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -591,7 +554,7 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.startPrank(eligibleHatWearer);
     HATS.renounceHat(eligibleHat);
@@ -599,31 +562,28 @@ contract Deployment is WithInstanceTest {
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    vm.expectRevert(
-    abi.encodeWithSelector(NotAuth.selector, eligibleHat
-    ));
+    vm.expectRevert(abi.encodeWithSelector(NotAuth.selector, eligibleHat));
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
   }
 
-  function test_processTooEarlyFail() public {
+  function test_witnessTooEarlyFail() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -641,30 +601,29 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
-    vm.expectRevert(ProcessedEarly.selector);
-    shaman.process(commitment, signature);
+    vm.expectRevert(WitnessedEarly.selector);
+    shaman.witness(commitment, signature);
   }
 
-  function test_processAfterDeadlineFail() public {
+  function test_witnessAfterDeadlineFail() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -682,30 +641,30 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 2 days + _claimDelay);
 
     vm.expectRevert(DeadlinePassed.selector);
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
   }
 
-  function test_processNonSponsoredFail() public {
+  function test_witnessNonSponsoredFail() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     // This line below is very important; because the original commitment is modified during contract execution
@@ -715,32 +674,31 @@ contract Deployment is WithInstanceTest {
 
     bytes32 digest = shaman.getDigest(commitment);
 
-    bytes memory signature = signFromUser(processorHatWearerPrivateKey, digest);
+    bytes memory signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
     vm.expectRevert(NotSponsored.selector);
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
   }
 
-  function test_processEvent() public {
+  function test_witnessEvent() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -758,13 +716,13 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
     vm.expectEmit(true, true, false, false);
-    emit Processed(processorHatWearer, shaman.getCommitmentHash(commitment));
-    shaman.process(commitment, signature);
+    emit Witnessed(witnessHatWearer, shaman.getCommitmentHash(commitment));
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -777,15 +735,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -804,11 +762,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -834,15 +792,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -861,11 +819,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -883,15 +841,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -910,7 +868,7 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
@@ -927,15 +885,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -954,11 +912,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
 
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
@@ -978,15 +936,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: 1000 ether,
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(token),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: 1000 ether,
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(token),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1009,11 +967,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
 
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
@@ -1040,15 +998,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: 1000 ether,
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(token),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: 1000 ether,
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(token),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1071,11 +1029,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
 
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
@@ -1099,15 +1057,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: 2000 ether,
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(token),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: 2000 ether,
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(token),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1130,11 +1088,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
 
     commitment.extraRewardAmount = 2000 ether;
     digest = shaman.getDigest(commitment);
@@ -1148,7 +1106,8 @@ contract Deployment is WithInstanceTest {
         commitment.extraRewardToken,
         commitment.extraRewardAmount,
         token.balanceOf(address(shaman)),
-        extraRewardDebt)
+        extraRewardDebt
+      )
     );
     shaman.sponsor(commitment, signature);
   }
@@ -1160,15 +1119,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1190,7 +1149,7 @@ contract Deployment is WithInstanceTest {
     SponsorshipStatus expected = SponsorshipStatus.Failed;
     assertEq(uint256(shaman.commitments(commitmentHash)), uint256(expected));
   }
-  
+
   function test_clearInvalidClearFail() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
@@ -1198,15 +1157,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     assertEq(shaman.extraRewardDebt(address(token)), 0);
@@ -1229,11 +1188,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
 
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
@@ -1242,9 +1201,7 @@ contract Deployment is WithInstanceTest {
     signature = signFromUser(nonWearerPrivateKey, digest);
 
     vm.warp(commitment.timeFactor + 1);
-    vm.expectRevert(
-      abi.encodeWithSelector(InvalidClear.selector, uint256(2), commitment.timeFactor)
-    );
+    vm.expectRevert(abi.encodeWithSelector(InvalidClear.selector, uint256(2), commitment.timeFactor));
     shaman.clear(commitment);
   }
 
@@ -1277,17 +1234,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -1307,10 +1263,9 @@ contract Deployment is WithInstanceTest {
     vm.warp(block.timestamp + _claimDelay + 1);
 
     vm.expectEmit(true, true, true, false);
-    emit Poke(nonWearer, shaman.getCommitmentHash(commitment), bytes32("The Report"));
+    emit Poke(nonWearer, shaman.getCommitmentHash(commitment), "The Report");
     vm.prank(nonWearer);
-    shaman.poke(commitment, bytes32("The Report"));
-
+    shaman.poke(commitment, "The Report");
   }
 
   function test_pokePokedEarlyFail() public {
@@ -1320,17 +1275,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -1349,7 +1303,7 @@ contract Deployment is WithInstanceTest {
 
     vm.expectRevert(PokedEarly.selector);
     vm.prank(nonWearer);
-    shaman.poke(commitment, bytes32("The Report"));
+    shaman.poke(commitment, "The Report");
   }
 
   function test_pokeInvalidPokeFail() public {
@@ -1359,17 +1313,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -1387,8 +1340,7 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     vm.expectRevert(InvalidPoke.selector);
-    shaman.poke(commitment, bytes32("The Report"));
-
+    shaman.poke(commitment, "The Report");
   }
 
   function test_pokeNotSponsoredFail() public {
@@ -1398,20 +1350,19 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     vm.expectRevert(NotSponsored.selector);
-    shaman.poke(commitment, bytes32("The Report"));
-
+    shaman.poke(commitment, "The Report");
   }
 
   function test_sponsorContractSigner() public {
@@ -1421,15 +1372,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 r = bytes32(uint256(uint160(address(contractAccount))));
@@ -1456,22 +1407,22 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
   }
 
-  function test_processContractSigner() public {
+  function test_witnessContractSigner() public {
     uint256 _claimDelay = shaman.claimDelay();
     uint256 _timeFactor = block.timestamp + 1 days + _claimDelay;
 
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1490,7 +1441,7 @@ contract Deployment is WithInstanceTest {
 
     signature = abi.encode(r, s, v);
     vm.prank(dao);
-    HATS.mintHat(processorHat, address(contractAccount));
+    HATS.mintHat(witnessHat, address(contractAccount));
 
     bytes32 commitmentHash = shaman.getCommitmentHash(commitment);
     SponsorshipStatus actual = shaman.commitments(commitmentHash);
@@ -1503,7 +1454,7 @@ contract Deployment is WithInstanceTest {
 
     contractAccount.authorizeDigest(digest);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -1516,15 +1467,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 r = bytes32(uint256(uint160(address(contractAccount))));
@@ -1546,15 +1497,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: address(contractAccount),
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: address(contractAccount),
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1573,11 +1524,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -1610,18 +1561,16 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
-    
-    
 
     bytes32 digest = shaman.getDigest(commitment);
 
@@ -1639,11 +1588,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -1667,15 +1616,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1694,11 +1643,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -1717,15 +1666,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1744,11 +1693,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -1768,15 +1717,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1795,11 +1744,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
@@ -1819,15 +1768,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1854,15 +1803,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     vm.expectRevert(abi.encodeWithSelector(InvalidClear.selector, uint256(0), commitment.expirationTime));
@@ -1876,15 +1825,15 @@ contract Deployment is WithInstanceTest {
     Commitment memory commitment = Commitment({
       eligibleHat: uint256(0),
       shares: uint256(1000 ether),
-        loot: uint256(1000 ether),
-          extraRewardAmount: uint256(0),
-            timeFactor: _timeFactor,
-             sponsoredTime: uint256(0),
-                contextURL: "theSlug",
-                metadata: "ipfs://metadata",
-                 recipient: nonWearer,
-                  extraRewardToken: address(0),
-                   expirationTime : uint256(3650 days + block.timestamp)
+      loot: uint256(1000 ether),
+      extraRewardAmount: uint256(0),
+      timeFactor: _timeFactor,
+      sponsoredTime: uint256(0),
+      contextURL: "theSlug",
+      metadata: "ipfs://metadata",
+      recipient: nonWearer,
+      extraRewardToken: address(0),
+      expirationTime: uint256(3650 days + block.timestamp)
     });
 
     bytes32 digest = shaman.getDigest(commitment);
@@ -1903,11 +1852,11 @@ contract Deployment is WithInstanceTest {
     assertEq(uint256(actual), uint256(expected));
 
     digest = shaman.getDigest(commitment);
-    signature = signFromUser(processorHatWearerPrivateKey, digest);
+    signature = signFromUser(witnessHatWearerPrivateKey, digest);
 
     vm.warp(block.timestamp + 1 hours + _claimDelay);
 
-    shaman.process(commitment, signature);
+    shaman.witness(commitment, signature);
     actual = shaman.commitments(commitmentHash);
     expected = SponsorshipStatus.Approved;
     assertEq(uint256(actual), uint256(expected));
