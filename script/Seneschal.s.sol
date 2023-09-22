@@ -3,9 +3,7 @@ pragma solidity ^0.8.18;
 
 import { Script, console2, VmSafe } from "forge-std/Script.sol";
 import { Seneschal } from "../src/Seneschal.sol";
-import {
-  HatsModuleFactory, deployModuleFactory, deployModuleInstance
-} from "hats-module/utils/DeployFunctions.sol";
+import { HatsModuleFactory, deployModuleFactory, deployModuleInstance } from "hats-module/utils/DeployFunctions.sol";
 
 contract DeployImplementation is Script {
   Seneschal public implementation;
@@ -41,7 +39,6 @@ contract DeployImplementation is Script {
 }
 
 contract DeployInstance is Script {
-
   HatsModuleFactory public factory = HatsModuleFactory(vm.envAddress("HATS_MODULE_FACTORY"));
 
   address public instance;
@@ -50,7 +47,7 @@ contract DeployInstance is Script {
   uint256 public sponsorHatId = vm.envUint("SPONSOR_HAT_ID");
   address public baal = vm.envAddress("BAAL");
   uint256 public ownerHat = vm.envUint("OWNER_HAT");
-  uint256 public processorHatId = vm.envUint("PROCESSOR_HAT_ID");
+  uint256 public witnessHatId = vm.envUint("WITNESS_HAT_ID");
   bytes public otherImmutableArgs;
 
   uint256 additiveDelay = vm.envUint("ADDITIVE_DELAY");
@@ -62,7 +59,7 @@ contract DeployInstance is Script {
   /// @dev override this to abi.encode (packed) other relevant immutable args (initialized and set within the function
   /// body). Alternatively, you can pass encoded data in
   function encodeImmutableArgs() internal virtual returns (bytes memory) {
-    otherImmutableArgs = abi.encodePacked(baal, sponsorHatId, processorHatId);
+    otherImmutableArgs = abi.encodePacked(baal, sponsorHatId, witnessHatId);
     return otherImmutableArgs;
   }
 
@@ -86,7 +83,7 @@ contract DeployInstance is Script {
     uint256 _sponsorHatId,
     address _baal,
     uint256 _ownerHat,
-    uint256 _processorHatId,
+    uint256 _witnessHatId,
     bytes memory _otherImmutableArgs,
     bytes memory _initData,
     bool _verbose
@@ -96,7 +93,7 @@ contract DeployInstance is Script {
     sponsorHatId = _sponsorHatId;
     baal = _baal;
     ownerHat = _ownerHat;
-    processorHatId = _processorHatId;
+    witnessHatId = _witnessHatId;
     otherImmutableArgs = _otherImmutableArgs;
     initData = _initData;
     verbose = _verbose;
